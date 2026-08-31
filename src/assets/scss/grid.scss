@@ -1,0 +1,80 @@
+@use "sass:math";
+
+// ==========================================
+// Variables & Breakpoints
+// ==========================================
+$grid-columns: 12 !default;
+$gutter-md: 16px !default;
+
+$breakpoints: (
+        sm: 576px,
+        md: 768px,
+        lg: 992px,
+        xl: 1200px
+) !default;
+
+// ==========================================
+// Base Row (Container for columns)
+// ==========================================
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+  margin-right: -(math.div($gutter-md, 2));
+  margin-left: -(math.div($gutter-md, 2));
+
+  // Apply gutter padding to all direct children
+  > * {
+    box-sizing: border-box;
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 100%;
+    padding-right: math.div($gutter-md, 2);
+    padding-left: math.div($gutter-md, 2);
+  }
+}
+
+// Auto & Equal Width Column
+.col {
+  flex: 1 0 0%;
+  width: auto;
+}
+
+.col-auto {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+// ==========================================
+// Default 12 Columns (Mobile First / col-1 to col-12)
+// ==========================================
+@for $i from 1 through $grid-columns {
+  .col-#{$i} {
+    flex: 0 0 auto;
+    width: math.percentage(math.div($i, $grid-columns));
+  }
+}
+
+// ==========================================
+// Responsive Breakpoints (col-sm-*, col-md-*, col-lg-*, col-xl-*)
+// ==========================================
+@each $bp-name, $bp-value in $breakpoints {
+  @media (min-width: #{$bp-value}) {
+    .col-#{$bp-name} {
+      flex: 1 0 0%;
+      width: auto;
+    }
+
+    .col-#{$bp-name}-auto {
+      flex: 0 0 auto;
+      width: auto;
+    }
+
+    @for $i from 1 through $grid-columns {
+      .col-#{$bp-name}-#{$i} {
+        flex: 0 0 auto;
+        width: math.percentage(math.div($i, $grid-columns));
+      }
+    }
+  }
+}
