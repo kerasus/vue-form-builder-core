@@ -1,6 +1,8 @@
 import { ref, nextTick, type Ref, type Component } from 'vue'
 import * as shvl from 'shvl'
 
+export type FormDataMode = 'nested' | 'flat'
+
 export interface FormInputOption {
     label?: string
     value?: any
@@ -50,30 +52,69 @@ export function useFormBuilder(options: UseFormBuilderOptions = {}) {
     }
 
     // Assign unique UIDs recursively
-    const setUidForInputs = (inputs: FormInputItem[] = inputData.value): void => {
+    const setUidForInputs = (
+        inputs: FormInputItem[] = inputData.value
+    ): void => {
         inputs.forEach((input) => {
             if (!input.uid) {
                 input.uid = generateUid()
             }
-            if (input.type === 'formBuilder' && Array.isArray(input.value)) {
-                setUidForInputs(input.value)
+
+            if (
+                input.type === 'formBuilder' &&
+                Array.isArray(input.inputs)
+            ) {
+                setUidForInputs(input.inputs)
             }
         })
     }
 
     // Recursively extract formData key-value mapping from inputs array
-    const extractFormData = (inputs: FormInputItem[] = inputData.value): FormDataObject => {
+    const extractFormData = (
+        inputs: FormInputItem[] = inputData.value
+    ): FormDataObject => {
         const data: FormDataObject = {}
+
         inputs.forEach((input) => {
             if (!input.name) return
 
-            if (input.type === 'formBuilder' && Array.isArray(input.value)) {
-                data[input.name] = extractFormData(input.value)
+            if (
+                input.type === 'formBuilder' &&
+                Array.isArray(input.inputs)
+            ) {
+                data[input.name] = input.value ?? {}
             } else {
-                data[input.name] = input.value !== undefined ? input.value : null
+                data[input.name] =
+                    input.value !== undefined
+                        ? input.value
+                        : null
             }
         })
+
         return data
+    }
+
+    const flattenFormData = (
+        data: FormDataObject
+    ): FormDataObject => {
+        const result: FormDataObject = {}
+
+        Object.entries(data).forEach(([key, value]) => {
+            if (
+                value !== null &&
+                typeof value === 'object' &&
+                !Array.isArray(value)
+            ) {
+                Object.assign(
+                    result,
+                    flattenFormData(value)
+                )
+            } else {
+                result[key] = value
+            }
+        })
+
+        return result
     }
 
     // Recursively apply formData key-value updates to inputs schema
@@ -90,10 +131,13 @@ export function useFormBuilder(options: UseFormBuilderOptions = {}) {
 
             if (
                 input.type === 'formBuilder' &&
-                Array.isArray(input.value) &&
+                Array.isArray(input.inputs) &&
+                incomingValue &&
                 typeof incomingValue === 'object'
             ) {
-                applyFormDataToInputs(incomingValue, input.value)
+                input.value = {
+                    ...incomingValue
+                }
             } else {
                 input.value = incomingValue
             }
@@ -211,8 +255,8 @@ export function useFormBuilder(options: UseFormBuilderOptions = {}) {
 
     const clearValues = (inputs: FormInputItem[] = inputData.value): void => {
         inputs.forEach((input) => {
-            if (input.type === 'formBuilder' && Array.isArray(input.value)) {
-                clearValues(input.value)
+            if (input.type === 'formBuilder') {
+                input.value = {}
             } else if (input.type === 'checkbox') {
                 input.value = false
             } else if (Array.isArray(input.value)) {
@@ -268,6 +312,7 @@ export function useFormBuilder(options: UseFormBuilderOptions = {}) {
         getValidChainedObject,
         // Exposed Form API Methods
         focus,
+        flattenFormData,
         getFormData,
         setFormData,
         getInputsByName,

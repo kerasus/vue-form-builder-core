@@ -1,13 +1,12 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import dts from 'vite-plugin-dts'
-import { resolve } from 'path'
+import { resolve } from 'node:path'
 
 export default defineConfig(({ mode }) => {
   if (mode === 'development') {
     return {
-      plugins: [vue()],
-      root: 'dev'
+      plugins: [vue()]
     }
   }
 
@@ -16,12 +15,12 @@ export default defineConfig(({ mode }) => {
       vue(),
       dts({
         insertTypesEntry: true,
-        include: ['src/**/*.ts', 'src/**/*.vue']
+        include: ['src/**/*.ts', 'src/**/*.vue', 'dev/**/*.ts', 'dev/**/*.vue'],
       })
     ],
     build: {
       lib: {
-        entry: resolve(__dirname, 'src/index.ts'),
+        entry: resolve(import.meta.dirname, 'src/index.ts'),
         name: 'VueFormBuilderCore',
         fileName: (format) => `vue-form-builder-core.${format === 'es' ? 'js' : 'umd.cjs'}`
       },

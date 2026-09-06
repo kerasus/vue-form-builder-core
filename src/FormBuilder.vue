@@ -8,9 +8,9 @@
     >
       <!-- Dynamic Form Field Component -->
       <component
+          :model-value="input.value"
           :is="resolveComponent(input)"
           :ref="(el: any) => setInputRef(el, input)"
-          :model-value="input.value"
           v-bind="getComponentProps(input)"
           :disabled="disable || input.disabled"
           :readonly="input.readonly"
@@ -33,11 +33,11 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch, onMounted, defineAsyncComponent, type Component, type CSSProperties } from 'vue'
+import { ref, watch, onMounted, type Component, type CSSProperties } from 'vue'
 import {
   useFormBuilder,
   type FormInputItem,
-  type FormDataObject
+  type FormDataObject, FormDataMode
 } from './composables/useFormBuilder'
 
 // Native Component Imports
@@ -49,13 +49,18 @@ import FormBuilderCheckbox from './components/FormBuilderCheckbox.vue'
 import FormBuilderRadio from './components/FormBuilderRadio.vue'
 import FormBuilderHidden from './components/FormBuilderHidden.vue'
 
-// Self-Registration for Recursive Nested FormBuilder
-const AsyncFormBuilder = defineAsyncComponent(() => import('./FormBuilder.vue'))
+defineOptions({
+  name: 'FormBuilder'
+})
+
+// // Self-Registration for Recursive Nested FormBuilder
+// const AsyncFormBuilder = defineAsyncComponent(() => import('./FormBuilder.vue'))
 
 interface Props {
   inputs?: FormInputItem[]
   value?: FormInputItem[] // Backward compatibility alias
   formData?: FormDataObject
+  formDataMode?: FormDataMode
   disable?: boolean
   customClass?: string
 }
@@ -91,6 +96,7 @@ const {
   getFormData,
   setFormData,
   getInputsByName,
+  flattenFormData,
   setInputByName,
   setInputValues,
   clearValues,
@@ -102,7 +108,12 @@ const {
     emit('update:value', updatedInputs)
   },
   onUpdateFormData: (updatedFormData) => {
-    emit('update:formData', updatedFormData)
+    const formData =
+        props.formDataMode === 'flat'
+            ? flattenFormData(updatedFormData)
+            : updatedFormData
+
+    emit('update:formData', formData)
   }
 })
 
@@ -161,7 +172,7 @@ const resolveComponent = (input: FormInputItem): Component | string => {
     return input.type as Component
   }
   if (input.type === 'formBuilder') {
-    return AsyncFormBuilder
+    return 'FormBuilder'
   }
   if (typeof input.type === 'string' && nativeComponentMap[input.type]) {
     return nativeComponentMap[input.type]
@@ -177,6 +188,13 @@ const getComponentProps = (input: FormInputItem): Record<string, any> => {
     uid,
     ...rest
   } = input
+
+  if (input.type === 'formBuilder') {
+    return {
+      ...rest,
+      formData: value || {}
+    }
+  }
 
   return rest
 }
@@ -258,8 +276,6 @@ defineExpose({
 </script>
 
 <style lang="scss" scoped>
-@use '@/assets/scss/grid.scss';
-
 .form-builder-container {
   box-sizing: border-box;
 }
