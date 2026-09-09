@@ -21,12 +21,12 @@ declare const __VLS_export: import('vue').DefineComponent<Props, {
     onChange?: ((event: Event) => any) | undefined;
     onClick?: ((event: MouseEvent) => any) | undefined;
 }>, {
+    modelValue: string | null;
     label: string;
     placeholder: string;
     disabled: boolean;
     readonly: boolean;
     rows: number;
-    modelValue: string | null;
 }, {}, {}, {}, string, import('vue').ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
 export default _default;

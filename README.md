@@ -1,8 +1,16 @@
 # vue-form-builder-core
 
-Headless and schema-driven form builder engine for Vue 3. This core engine allows you to build dynamic forms using a simple JSON-like schema, providing complete control over the UI while handling state, validation, and complex nested form structures.
+Headless, schema-driven form builder engine for Vue 3. Build dynamic forms from a JSON-like schema; the core focuses on state, validation, and nested structures while remaining headless so you can style the UI however you like.
 
 ## Installation
+
+Prefer pnpm for development (this repository uses pnpm):
+
+```bash
+pnpm install
+```
+
+To add the package to a project (when published):
 
 ```bash
 pnpm add vue-form-builder-core
@@ -12,17 +20,13 @@ npm install vue-form-builder-core
 
 ## Quick Start
 
-### Basic Usage with Component
+Use the `FormBuilder` component in your Vue 3 app with v-model or the provided composable API.
+
+Basic example (component):
 
 ```vue
 <template>
-  <div>
-    <FormBuilder 
-      v-model:value="inputs"
-      @update:formData="onFormDataUpdate" 
-    />
-    <button @click="submit">Submit</button>
-  </div>
+  <FormBuilder v-model:value="inputs" />
 </template>
 
 <script setup>
@@ -30,118 +34,117 @@ import { ref } from 'vue'
 import { FormBuilder } from 'vue-form-builder-core'
 
 const inputs = ref([
-  {
-    type: 'text',
-    name: 'username',
-    label: 'Username',
-    value: 'john_doe',
-    col: 'col-md-6'
-  },
-  {
-    type: 'email',
-    name: 'email',
-    label: 'Email Address',
-    placeholder: 'Enter your email',
-    col: 'col-md-6'
-  },
-  {
-    type: 'select',
-    name: 'role',
-    label: 'User Role',
-    options: [
-      { label: 'Admin', value: 'admin' },
-      { label: 'Editor', value: 'editor' },
-      { label: 'Viewer', value: 'viewer' }
-    ]
-  }
+  { type: 'text', name: 'firstName', label: 'First Name' },
+  { type: 'text', name: 'lastName', label: 'Last Name' }
 ])
-
-const onFormDataUpdate = (data) => {
-  console.log('Current Form Data:', data)
-}
-
-const submit = () => {
-  // inputs.value contains the full schema with values
-  // use getFormData() for a clean key-value object
-}
 </script>
 ```
 
-### Advanced Usage with Composable
+Composable example:
 
-The `useFormBuilder` composable provides fine-grained control over the form state and methods.
+```js
+import { useFormBuilder } from 'vue-form-builder-core'
+
+const { inputData, getFormData, setFormData } = useFormBuilder({
+  initialInputs: [{ type: 'text', name: 'email', label: 'Email' }]
+})
+
+// read values with getFormData()
+```
+
+## Demo (from dev/App.vue)
+
+The included demo at `dev/App.vue` shows a practical usage of the `FormBuilder` with two-way binding for both `inputs` and `formData`, nested forms, and programmatic methods via a component ref.
 
 ```vue
 <template>
-  <FormBuilder :inputs="inputData" />
+  <FormBuilder
+    ref="formRef"
+    v-model:form-data="formData"
+    v-model:inputs="inputs"
+    form-data-mode="flat"
+    @change="handleChange"
+  />
 </template>
 
 <script setup>
-import { FormBuilder, useFormBuilder } from 'vue-form-builder-core'
+import { ref } from 'vue'
+import FormBuilder from './src/FormBuilder.vue'
 
-const { 
-  inputData, 
-  getFormData, 
-  setFormData, 
-  setInputByName 
-} = useFormBuilder({
-  initialInputs: [
-    { type: 'text', name: 'firstName', label: 'First Name' },
-    { type: 'text', name: 'lastName', label: 'Last Name' }
-  ]
-})
+const formRef = ref(null)
 
-// Programmatically set values
-const loadData = () => {
-  setFormData({ firstName: 'Ali', lastName: 'Esmaeeli' })
-}
+const inputs = ref([
+  { name: 'fullname', type: 'text', label: 'Full Name' },
+  { name: 'email', type: 'email', label: 'Email' },
+  { name: 'gender', type: 'select', label: 'Gender', options: [{label:'Male',value:'male'},{label:'Female',value:'female'}] },
+  { name: 'agree', type: 'checkbox', label: 'I agree' },
+  { name: 'address', type: 'formBuilder', label: 'Address', inputs: [
+    { name: 'street', type: 'text', label: 'Street' },
+    { name: 'city', type: 'text', label: 'City' }
+  ] }
+])
+
+const formData = ref({ fullname: 'Alice', email: '', gender: 'female', agree: false, address: { street: '', city: '' } })
+
+function handleChange(payload) { console.log('Form changed:', payload) }
+
+// Methods available via `formRef.value` in the demo:
+// - getFormData()
+// - setFormData(data)
+// - clearValues()
 </script>
+```
+
+## Development (local demo)
+
+This repository includes a small demo app in the `dev/` folder that runs with Vite.
+
+Run locally:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Build package (type checking + bundle):
+
+```bash
+pnpm run build
+```
+
+Preview the production build:
+
+```bash
+pnpm run preview
 ```
 
 ## Built-in Input Types
 
-`vue-form-builder-core` comes with several built-in types:
-
-- `text`, `number`, `password`, `email`, `date`, `time` (via standard inputs)
-- `textarea`
-- `select`
-- `checkbox`
-- `radio`
-- `file`
-- `hidden`
-- `formBuilder` (for nested/recursive forms)
+- text, number, password, email, date, time
+- textarea
+- select
+- checkbox
+- radio
+- file
+- hidden
+- nested `formBuilder` type for recursive forms
 
 ## Features
 
-- **Schema-Driven**: Define your forms entirely in JSON/JavaScript objects.
-- **Headless Core**: Focuses on logic and state, giving you flexibility in styling.
-- **Composable API**: Powerful `useFormBuilder` hook for advanced integrations.
-- **Nested Forms**: Support for recursive form structures using the `formBuilder` type.
-- **Grid System**: Built-in support for column-based layouts (e.g., `col-6`, `col-12`).
-- **TypeScript Support**: Fully typed for a better developer experience.
+- Schema-driven API for dynamic forms
+- Headless core (styling entirely up to you)
+- `useFormBuilder` composable for programmatic control
+- Nested/recursive forms support
+- Simple grid/column helpers
+- TypeScript typings included
 
-## Component Props
+## Contributing
 
-| Prop | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `inputs` | `Array` | `[]` | The form schema array. |
-| `value` | `Array` | `[]` | Alias for `inputs` (v-model compatibility). |
-| `formData` | `Object` | `{}` | Initial data to populate the form. |
-| `disable` | `Boolean` | `false` | Global disable state for all inputs. |
-| `customClass` | `String` | `''` | Custom CSS class for the container. |
+Contributions are welcome. Suggested workflow:
 
-## Methods (via Ref)
-
-When using a ref on the `FormBuilder` component, you have access to:
-
-- `focus()`: Focuses the first focusable input.
-- `getFormData()`: Returns the current form data as a key-value object.
-- `setFormData(data)`: Updates the form values from a key-value object.
-- `getInputsByName(name)`: Find a specific input by its name.
-- `setInputByName(name, value)`: Update a specific input's value.
-- `clearValues()`: Resets all input values.
-- `disableAllInputs(status)`: Set disabled state for all inputs.
-- `readonlyAllInputs(status)`: Set readonly state for all inputs.
+1. Fork and branch.
+2. Run `pnpm install` and `pnpm dev` to test the demo.
+3. Open a PR with a clear description.
 
 ## License
 

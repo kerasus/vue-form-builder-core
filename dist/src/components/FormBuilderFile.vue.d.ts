@@ -18,10 +18,10 @@ declare const __VLS_export: import('vue').DefineComponent<Props, {
     onChange?: ((event: Event) => any) | undefined;
     onClick?: ((event: MouseEvent) => any) | undefined;
 }>, {
+    modelValue: File | File[] | FileList | null;
     label: string;
     disabled: boolean;
     multiple: boolean;
-    modelValue: File | File[] | FileList | null;
     accept: string;
 }, {}, {}, {}, string, import('vue').ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;

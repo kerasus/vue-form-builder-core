@@ -19,10 +19,10 @@ declare const __VLS_export: import('vue').DefineComponent<Props, {
     "onUpdate:modelValue"?: ((value: any) => any) | undefined;
     onChange?: ((event: Event) => any) | undefined;
 }>, {
+    modelValue: any;
     label: string;
     disabled: boolean;
     options: Array<string | number | RadioOption>;
-    modelValue: any;
 }, {}, {}, {}, string, import('vue').ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
 export default _default;

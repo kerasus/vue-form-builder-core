@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
       dts({
         insertTypesEntry: true,
         include: ['src/**/*.ts', 'src/**/*.vue', 'dev/**/*.ts', 'dev/**/*.vue'],
+        rollupTypes: true
       })
     ],
     build: {

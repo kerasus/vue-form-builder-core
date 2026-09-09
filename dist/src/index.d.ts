@@ -1,5 +1,5 @@
 import { default as FormBuilder } from './FormBuilder.vue';
-import { useFormBuilder } from './composables/useFormBuilder';
-export { FormBuilder, useFormBuilder };
+export * from './utils/types';
+export type FormDataObject = Record<string, any>;
+export { FormBuilder };
 export default FormBuilder;
-export type * from '../types/index';

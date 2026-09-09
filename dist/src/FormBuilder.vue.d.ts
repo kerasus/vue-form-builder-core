@@ -1,17 +1,42 @@
-import { FormInputItem, FormDataObject } from './composables/useFormBuilder';
+import { Component } from 'vue';
+export type FormDataMode = 'nested' | 'flat';
+export interface FormInputOption {
+    label?: string;
+    value?: any;
+    [key: string]: any;
+}
+export interface FormInputItem {
+    name: string;
+    type?: string | Component | object;
+    value?: any;
+    label?: string;
+    placeholder?: string;
+    col?: string;
+    uid?: string;
+    disabled?: boolean;
+    readonly?: boolean;
+    multiple?: boolean;
+    rows?: number;
+    options?: Array<string | number | FormInputOption>;
+    inputs?: FormInputItem[];
+    responseKey?: string;
+    customClass?: string;
+    [key: string]: any;
+}
+export type FormDataObject = Record<string, any>;
 interface Props {
     inputs?: FormInputItem[];
     value?: FormInputItem[];
     formData?: FormDataObject;
-    disable?: boolean;
+    formDataMode?: FormDataMode;
+    readonly?: boolean;
+    disabled?: boolean;
+    loading?: boolean;
     customClass?: string;
 }
-declare var __VLS_15: string, __VLS_16: any;
-type __VLS_Slots = {} & {
-    [K in NonNullable<typeof __VLS_15>]?: (props: typeof __VLS_16) => any;
-};
-declare const __VLS_base: import('vue').DefineComponent<Props, {
+declare const __VLS_export: import('vue').DefineComponent<Props, {
     focus: () => void;
+    flattenFormData: (data: FormDataObject) => FormDataObject;
     getFormData: () => FormDataObject;
     setFormData: (data: FormDataObject) => void;
     getInputsByName: (name: string, inputs?: FormInputItem[]) => FormInputItem | undefined;
@@ -57,17 +82,12 @@ declare const __VLS_base: import('vue').DefineComponent<Props, {
     "onUpdate:value"?: ((value: FormInputItem[]) => any) | undefined;
     "onUpdate:formData"?: ((value: FormDataObject) => any) | undefined;
 }>, {
+    disabled: boolean;
+    readonly: boolean;
     value: FormInputItem[];
-    customClass: string;
     inputs: FormInputItem[];
+    customClass: string;
     formData: FormDataObject;
-    disable: boolean;
 }, {}, {}, {}, string, import('vue').ComponentProvideOptions, false, {}, any>;
-declare const __VLS_export: __VLS_WithSlots<typeof __VLS_base, __VLS_Slots>;
 declare const _default: typeof __VLS_export;
 export default _default;
-type __VLS_WithSlots<T, S> = T & {
-    new (): {
-        $slots: S;
-    };
-};

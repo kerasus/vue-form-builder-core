@@ -105,7 +105,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import FormBuilder from '../src/FormBuilder.vue'
-import type { FormInputItem } from '../src/composables/useFormBuilder'
+import type { FormInputItem } from '@/utils/types'
 
 const formRef = ref<any>(null)
 

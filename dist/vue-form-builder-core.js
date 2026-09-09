@@ -1,118 +1,7 @@
-import { Fragment as e, computed as t, createBlock as n, createCommentVNode as r, createElementBlock as i, createElementVNode as a, createSlots as o, defineAsyncComponent as s, defineComponent as c, mergeProps as l, nextTick as u, normalizeClass as d, normalizeStyle as f, onMounted as p, openBlock as m, ref as h, renderList as g, renderSlot as _, resolveDynamicComponent as v, toDisplayString as y, unref as b, watch as x, withCtx as S } from "vue";
-import * as C from "shvl";
-//#region \0rolldown/runtime.js
-var w = Object.defineProperty, T = (e, t) => {
-	let n = {};
-	for (var r in e) w(n, r, {
-		get: e[r],
-		enumerable: !0
-	});
-	return t || w(n, Symbol.toStringTag, { value: "Module" }), n;
-};
-//#endregion
-//#region src/composables/useFormBuilder.ts
-function E(e = {}) {
-	let t = h([]), n = h({}), r = !1, i = !1, a = () => typeof crypto < "u" && crypto.randomUUID ? crypto.randomUUID() : "uid-" + Math.random().toString(36).substring(2, 9), o = (e = t.value) => {
-		e.forEach((e) => {
-			e.uid ||= a(), e.type === "formBuilder" && Array.isArray(e.value) && o(e.value);
-		});
-	}, s = (e = t.value) => {
-		let n = {};
-		return e.forEach((e) => {
-			e.name && (e.type === "formBuilder" && Array.isArray(e.value) ? n[e.name] = s(e.value) : n[e.name] = e.value === void 0 ? null : e.value);
-		}), n;
-	}, c = (e, n = t.value) => {
-		!e || typeof e != "object" || n.forEach((t) => {
-			if (!t.name || !(t.name in e)) return;
-			let n = e[t.name];
-			t.type === "formBuilder" && Array.isArray(t.value) && typeof n == "object" ? c(n, t.value) : t.value = n;
-		});
-	}, l = () => {
-		if (r) return;
-		i = !0;
-		let n = s(t.value);
-		e.onUpdateInputs?.(t.value), e.onUpdateFormData?.(n), u(() => {
-			i = !1;
-		});
-	}, d = (e, t) => !e || !t ? e : C.get(e, t), f = (e, t) => {
-		if (e && t.name) {
-			let r = `input-${t.name}-${t.uid || ""}`;
-			n.value[r] = e;
-		}
-	}, p = (e = t.value) => {
-		for (let t of e) if (t.type === "formBuilder" && Array.isArray(t.value)) {
-			let e = p(t.value);
-			if (e) return e;
-		} else return t;
-		return null;
-	}, m = () => {
-		let e = p();
-		if (!e) return;
-		let t = `input-${e.name}-${e.uid || ""}`, r = n.value[t];
-		r && (typeof r.focus == "function" ? r.focus() : r.$el && typeof r.$el.focus == "function" && r.$el.focus());
-	}, g = () => s(t.value), _ = (e) => {
-		i || !e || (r = !0, c(e, t.value), l(), u(() => {
-			r = !1;
-		}));
-	}, v = (e, n = t.value) => {
-		for (let t of n) {
-			if (t.name === e) return t;
-			if (t.type === "formBuilder" && Array.isArray(t.value)) {
-				let n = v(e, t.value);
-				if (n) return n;
-			}
-		}
-	}, y = (e, t) => {
-		let n = v(e);
-		n && (n.value = t, l());
-	}, b = (e, n = t.value) => {
-		n.forEach((t) => {
-			if (t.type === "formBuilder" && Array.isArray(t.value)) {
-				b(e, t.value);
-				return;
-			}
-			t.responseKey && (t.value = C.get(e, t.responseKey));
-		}), l();
-	}, x = (e = t.value) => {
-		e.forEach((e) => {
-			e.type === "formBuilder" && Array.isArray(e.value) ? x(e.value) : e.value = e.type === "checkbox" ? !1 : Array.isArray(e.value) ? [] : null;
-		}), l();
-	}, S = (e, n = t.value) => {
-		n.forEach((t) => {
-			t.type === "formBuilder" && Array.isArray(t.value) ? S(e, t.value) : t.disabled = e;
-		});
-	}, w = (e, n = t.value) => {
-		n.forEach((t) => {
-			t.type === "formBuilder" && Array.isArray(t.value) ? w(e, t.value) : t.readonly = e;
-		});
-	};
-	return {
-		inputData: t,
-		inputRefs: n,
-		generateUid: a,
-		setUidForInputs: o,
-		extractFormData: s,
-		applyFormDataToInputs: c,
-		syncState: l,
-		setInputRef: f,
-		setInputs: (e) => {
-			t.value = e ? JSON.parse(JSON.stringify(e)) : [], o(t.value);
-		},
-		getValidChainedObject: d,
-		focus: m,
-		getFormData: g,
-		setFormData: _,
-		getInputsByName: v,
-		setInputByName: y,
-		setInputValues: b,
-		clearValues: x,
-		disableAllInputs: S,
-		readonlyAllInputs: w
-	};
-}
-//#endregion
+import { Fragment as e, computed as t, createBlock as n, createCommentVNode as r, createElementBlock as i, createElementVNode as a, defineComponent as o, markRaw as s, mergeProps as c, nextTick as l, normalizeClass as u, normalizeStyle as d, onMounted as f, openBlock as p, ref as m, renderList as h, resolveDynamicComponent as g, toDisplayString as _, toRaw as ee, watch as v } from "vue";
+import * as y from "shvl";
 //#region src/components/FormBuilderInput.vue?vue&type=script&setup=true&lang.ts
-var D = { class: "form-builder-field" }, O = ["for"], k = [
+var b = { class: "form-builder-field" }, x = ["for"], S = [
 	"id",
 	"value",
 	"type",
@@ -120,7 +9,7 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 	"placeholder",
 	"disabled",
 	"readonly"
-], A = /* @__PURE__ */ c({
+], C = /* @__PURE__ */ o({
 	__name: "FormBuilderInput",
 	props: {
 		name: {},
@@ -144,7 +33,7 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 		"click"
 	],
 	setup(e, { expose: t, emit: n }) {
-		let o = n, s = h(null), c = (e) => {
+		let o = n, s = m(null), c = (e) => {
 			let t = e.target;
 			o("update:modelValue", t.value), o("input", e);
 		}, l = (e) => {
@@ -157,11 +46,11 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 				s.value?.focus();
 			},
 			inputRef: s
-		}), (t, n) => (m(), i("div", D, [e.label ? (m(), i("label", {
+		}), (t, n) => (p(), i("div", b, [e.label ? (p(), i("label", {
 			key: 0,
 			for: e.name,
 			class: "form-builder-label"
-		}, y(e.label), 9, O)) : r("", !0), a("input", {
+		}, _(e.label), 9, x)) : r("", !0), a("input", {
 			id: e.name,
 			ref_key: "inputRef",
 			ref: s,
@@ -175,15 +64,15 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 			onInput: c,
 			onChange: l,
 			onClick: u
-		}, null, 40, k)]));
+		}, null, 40, S)]));
 	}
-}), j = { class: "form-builder-field" }, M = ["for"], N = [
+}), w = { class: "form-builder-field" }, T = ["for"], E = [
 	"id",
 	"name",
 	"disabled",
 	"multiple",
 	"accept"
-], P = /* @__PURE__ */ c({
+], D = /* @__PURE__ */ o({
 	__name: "FormBuilderFile",
 	props: {
 		name: {},
@@ -205,7 +94,7 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 		"click"
 	],
 	setup(e, { expose: t, emit: n }) {
-		let o = e, s = n, c = h(null), l = (e) => {
+		let o = e, s = n, c = m(null), l = (e) => {
 			let t = e.target;
 			if (t.files) {
 				let e = o.multiple ? Array.from(t.files) : t.files[0] || null;
@@ -220,11 +109,11 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 				c.value?.focus();
 			},
 			fileRef: c
-		}), (t, n) => (m(), i("div", j, [e.label ? (m(), i("label", {
+		}), (t, n) => (p(), i("div", w, [e.label ? (p(), i("label", {
 			key: 0,
 			for: e.name,
 			class: "form-builder-label"
-		}, y(e.label), 9, M)) : r("", !0), a("input", {
+		}, _(e.label), 9, T)) : r("", !0), a("input", {
 			id: e.name,
 			ref_key: "fileRef",
 			ref: c,
@@ -236,9 +125,9 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 			class: "form-builder-native-input",
 			onChange: l,
 			onClick: u
-		}, null, 40, N)]));
+		}, null, 40, E)]));
 	}
-}), F = { class: "form-builder-field" }, I = ["for"], L = [
+}), O = { class: "form-builder-field" }, k = ["for"], A = [
 	"id",
 	"value",
 	"name",
@@ -246,7 +135,7 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 	"disabled",
 	"readonly",
 	"rows"
-], R = /* @__PURE__ */ c({
+], j = /* @__PURE__ */ o({
 	__name: "FormBuilderTextarea",
 	props: {
 		name: {},
@@ -270,7 +159,7 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 		"click"
 	],
 	setup(e, { expose: t, emit: n }) {
-		let o = n, s = h(null), c = (e) => {
+		let o = n, s = m(null), c = (e) => {
 			let t = e.target;
 			o("update:modelValue", t.value), o("input", e);
 		}, l = (e) => {
@@ -283,11 +172,11 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 				s.value?.focus();
 			},
 			textareaRef: s
-		}), (t, n) => (m(), i("div", F, [e.label ? (m(), i("label", {
+		}), (t, n) => (p(), i("div", O, [e.label ? (p(), i("label", {
 			key: 0,
 			for: e.name,
 			class: "form-builder-label"
-		}, y(e.label), 9, I)) : r("", !0), a("textarea", {
+		}, _(e.label), 9, k)) : r("", !0), a("textarea", {
 			id: e.name,
 			ref_key: "textareaRef",
 			ref: s,
@@ -301,20 +190,20 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 			onInput: c,
 			onChange: l,
 			onClick: u
-		}, null, 40, L)]));
+		}, null, 40, A)]));
 	}
-}), z = { class: "form-builder-select" }, B = ["for"], V = [
+}), M = { class: "form-builder-select" }, N = ["for"], P = [
 	"id",
 	"name",
 	"value",
 	"disabled",
 	"required",
 	"aria-readonly"
-], H = {
+], F = {
 	key: 0,
 	value: "",
 	disabled: ""
-}, U = ["value", "disabled"], ee = /* @__PURE__ */ c({
+}, I = ["value", "disabled"], te = /* @__PURE__ */ o({
 	__name: "FormBuilderSelect",
 	props: {
 		modelValue: { default: null },
@@ -342,11 +231,11 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 			let t = e.target, n = s.options.find((e) => String(e.value) === t.value);
 			c("update:modelValue", n?.value ?? null), c("change", e);
 		};
-		return (t, o) => (m(), i("div", z, [n.label ? (m(), i("label", {
+		return (t, o) => (p(), i("div", M, [n.label ? (p(), i("label", {
 			key: 0,
 			class: "form-builder-select__label",
 			for: l.value
-		}, y(n.label), 9, B)) : r("", !0), a("select", {
+		}, _(n.label), 9, N)) : r("", !0), a("select", {
 			id: l.value,
 			class: "form-builder-select__control",
 			name: n.name || void 0,
@@ -355,18 +244,18 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 			required: n.required,
 			"aria-readonly": n.readonly,
 			onChange: u
-		}, [n.placeholder ? (m(), i("option", H, y(n.placeholder), 1)) : r("", !0), (m(!0), i(e, null, g(n.options, (e) => (m(), i("option", {
+		}, [n.placeholder ? (p(), i("option", F, _(n.placeholder), 1)) : r("", !0), (p(!0), i(e, null, h(n.options, (e) => (p(), i("option", {
 			key: String(e.value),
 			value: e.value,
 			disabled: e.disabled
-		}, y(e.label), 9, U))), 128))], 40, V)]));
+		}, _(e.label), 9, I))), 128))], 40, P)]));
 	}
-}), W = { class: "form-builder-field-inline" }, G = [
+}), L = { class: "form-builder-field-inline" }, R = [
 	"id",
 	"checked",
 	"name",
 	"disabled"
-], K = ["for"], te = /* @__PURE__ */ c({
+], z = ["for"], B = /* @__PURE__ */ o({
 	__name: "FormBuilderCheckbox",
 	props: {
 		name: {},
@@ -386,7 +275,7 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 		"click"
 	],
 	setup(e, { expose: t, emit: n }) {
-		let o = n, s = h(null), c = (e) => {
+		let o = n, s = m(null), c = (e) => {
 			let t = e.target;
 			o("update:modelValue", t.checked), o("change", e);
 		}, l = (e) => {
@@ -397,7 +286,7 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 				s.value?.focus();
 			},
 			checkboxRef: s
-		}), (t, n) => (m(), i("div", W, [a("input", {
+		}), (t, n) => (p(), i("div", L, [a("input", {
 			id: e.name,
 			ref_key: "checkboxRef",
 			ref: s,
@@ -408,23 +297,23 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 			class: "form-builder-checkbox",
 			onChange: c,
 			onClick: l
-		}, null, 40, G), e.label ? (m(), i("label", {
+		}, null, 40, R), e.label ? (p(), i("label", {
 			key: 0,
 			for: e.name,
 			class: "form-builder-label"
-		}, y(e.label), 9, K)) : r("", !0)]));
+		}, _(e.label), 9, z)) : r("", !0)]));
 	}
-}), q = { class: "form-builder-field" }, J = {
+}), V = { class: "form-builder-field" }, H = {
 	key: 0,
 	class: "form-builder-label"
-}, Y = [
+}, U = [
 	"id",
 	"name",
 	"value",
 	"checked",
 	"disabled",
 	"onChange"
-], X = ["for"], ne = /* @__PURE__ */ c({
+], W = ["for"], G = /* @__PURE__ */ o({
 	__name: "FormBuilderRadio",
 	props: {
 		name: {},
@@ -438,12 +327,12 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 	},
 	emits: ["update:modelValue", "change"],
 	setup(t, { expose: n, emit: o }) {
-		let s = o, c = h([]), l = (e) => typeof e == "object" && e ? e.value === void 0 ? e.label : e.value : e, u = (e) => typeof e == "object" && e ? e.label === void 0 ? String(e.value) : e.label : String(e), d = (e, t) => {
+		let s = o, c = m([]), l = (e) => typeof e == "object" && e ? e.value === void 0 ? e.label : e.value : e, u = (e) => typeof e == "object" && e ? e.label === void 0 ? String(e.value) : e.label : String(e), d = (e, t) => {
 			s("update:modelValue", e), s("change", t);
 		};
 		return n({ focus: () => {
 			c.value[0]?.focus();
-		} }), (n, o) => (m(), i("div", q, [t.label ? (m(), i("span", J, y(t.label), 1)) : r("", !0), (m(!0), i(e, null, g(t.options, (e, n) => (m(), i("div", {
+		} }), (n, o) => (p(), i("div", V, [t.label ? (p(), i("span", H, _(t.label), 1)) : r("", !0), (p(!0), i(e, null, h(t.options, (e, n) => (p(), i("div", {
 			key: n,
 			class: "form-builder-radio-item"
 		}, [a("input", {
@@ -458,34 +347,45 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 			disabled: t.disabled,
 			class: "form-builder-radio",
 			onChange: (t) => d(l(e), t)
-		}, null, 40, Y), a("label", { for: `${t.name}-${n}` }, y(u(e)), 9, X)]))), 128))]));
+		}, null, 40, U), a("label", { for: `${t.name}-${n}` }, _(u(e)), 9, W)]))), 128))]));
 	}
-}), Z = ["value", "name"], re = /* @__PURE__ */ c({
+}), K = ["value", "name"], q = /* @__PURE__ */ o({
 	__name: "FormBuilderHidden",
 	props: {
 		name: {},
 		modelValue: {}
 	},
 	setup(e, { expose: t }) {
-		let n = h(null);
-		return t({ hiddenRef: n }), (t, r) => (m(), i("input", {
+		let n = m(null);
+		return t({ hiddenRef: n }), (t, r) => (p(), i("input", {
 			ref_key: "hiddenRef",
 			ref: n,
 			value: e.modelValue,
 			type: "hidden",
 			name: e.name
-		}, null, 8, Z));
+		}, null, 8, K));
 	}
-}), Q = /*@__PURE__*/ c({
+}), J = /*#__PURE__*/ ((e, t) => {
+	let n = e.__vccOpts || e;
+	for (let [e, r] of t) n[e] = r;
+	return n;
+})(/* @__PURE__ */ o({
+	name: "FormBuilder",
 	__name: "FormBuilder",
 	props: {
 		inputs: { default: void 0 },
 		value: { default: void 0 },
 		formData: { default: () => ({}) },
-		disable: {
+		formDataMode: {},
+		readonly: {
 			type: Boolean,
 			default: !1
 		},
+		disabled: {
+			type: Boolean,
+			default: !1
+		},
+		loading: { type: Boolean },
 		customClass: { default: "" }
 	},
 	emits: [
@@ -497,103 +397,175 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 		"onClick"
 	],
 	setup(t, { expose: r, emit: a }) {
-		let c = s(() => Promise.resolve().then(() => ae)), u = t, y = a;
-		h({});
-		let { inputData: C, setInputRef: w, setUidForInputs: T, setInputs: D, syncState: O, applyFormDataToInputs: k, focus: j, getFormData: M, setFormData: N, getInputsByName: F, setInputByName: I, setInputValues: L, clearValues: z, disableAllInputs: B, readonlyAllInputs: V } = E({
-			onUpdateInputs: (e) => {
-				y("update:inputs", e), y("update:value", e);
-			},
-			onUpdateFormData: (e) => {
-				y("update:formData", e);
-			}
-		}), H = {
-			text: A,
-			number: A,
-			password: A,
-			email: A,
-			date: A,
-			time: A,
-			file: P,
-			textarea: R,
-			select: ee,
-			checkbox: te,
-			radio: ne,
-			hidden: re
-		};
-		x(() => u.inputs || u.value, (e) => {
-			e && Array.isArray(e) && (D(e), T(), u.formData && Object.keys(u.formData).length > 0 && k(u.formData));
-		}, {
-			immediate: !0,
-			deep: !0
-		}), x(() => u.formData, (e) => {
-			!e || Object.keys(e).length === 0 || k(e);
-		}, { deep: !0 }), p(() => {
-			T();
-		});
-		let U = (e) => typeof e.type == "object" || typeof e.type == "function" ? e.type : e.type === "formBuilder" ? c : typeof e.type == "string" && H[e.type] ? H[e.type] : A, W = (e) => {
+		let o = t, _ = a, b = m([]), x = m({}), S = !1, w = !1, T = 0, E = () => (T += 1, `fb-id-${T}`), O = (e = b.value) => {
+			e.forEach((e) => {
+				e.uid ||= E(), e.type === "formBuilder" && Array.isArray(e.inputs) && O(e.inputs);
+			});
+		}, k = (e = b.value) => {
+			let t = {};
+			return e.forEach((e) => {
+				e.name && (e.type === "formBuilder" && Array.isArray(e.inputs) ? t[e.name] = e.value ?? k(e.inputs) : t[e.name] = e.value === void 0 ? null : e.value);
+			}), t;
+		}, A = (e) => {
+			let t = {};
+			return Object.entries(e).forEach(([e, n]) => {
+				typeof n == "object" && n && !Array.isArray(n) ? Object.assign(t, A(n)) : t[e] = n;
+			}), t;
+		}, M = (e, t = b.value) => {
+			!e || typeof e != "object" || t.forEach((t) => {
+				if (!t.name || !(t.name in e)) return;
+				let n = e[t.name];
+				t.type === "formBuilder" && Array.isArray(t.inputs) && n && typeof n == "object" ? (M(n, t.inputs), t.value = { ...n }) : t.value = n;
+			});
+		}, N = () => {
+			if (S) return;
+			w = !0;
+			let e = k(b.value);
+			_("update:inputs", b.value), _("update:value", b.value);
+			let t = o.formDataMode === "flat" ? A(e) : e;
+			_("update:formData", t), l(() => {
+				w = !1;
+			});
+		}, P = (e, t) => {
+			if (!t.name) return;
+			let n = `input-${t.name}-${t.uid || ""}`;
+			e ? x.value[n] = e : delete x.value[n];
+		}, F = (e) => {
+			b.value = e.map((e) => typeof e.type == "object" || typeof e.type == "function" ? {
+				...e,
+				type: s(ee(e.type))
+			} : { ...e }), O(b.value);
+		}, I = {
+			text: C,
+			number: C,
+			password: C,
+			email: C,
+			date: C,
+			time: C,
+			file: D,
+			textarea: j,
+			select: te,
+			checkbox: B,
+			radio: G,
+			hidden: q
+		}, L = (e) => typeof e.type == "object" || typeof e.type == "function" ? e.type : e.type === "formBuilder" ? "FormBuilder" : typeof e.type == "string" && I[e.type] ? I[e.type] : C, R = (e) => {
 			let { col: t, customClass: n, value: r, uid: i, ...a } = e;
-			return a;
-		}, G = (e) => {
-			if (typeof e.type != "object" || !e.type) return [];
-			let t = typeof e.type.data == "function" ? e.type.data() : e.type.data;
-			return t && Array.isArray(t.slots) ? t.slots : [];
-		}, K = (e) => e.type === "hidden" ? "hidden-col" : e.col ? e.col : "col-12", q = (e) => e.type === "hidden" ? {
+			return e.type === "formBuilder" ? {
+				...a,
+				formData: r || {}
+			} : a;
+		}, z = (e) => e.type === "hidden" ? "hidden-col" : e.col ? e.col : "col-12", V = (e) => e.type === "hidden" ? {
 			display: "none",
 			padding: 0,
 			margin: 0
-		} : {}, J = (e, t) => {
-			e.value = t, O();
+		} : {}, H = (e = b.value) => {
+			for (let t of e) if (t.type === "formBuilder" && Array.isArray(t.inputs)) {
+				let e = H(t.inputs);
+				if (e) return e;
+			} else return t;
+			return null;
+		}, U = () => {
+			let e = H();
+			if (!e) return;
+			let t = `input-${e.name}-${e.uid || ""}`, n = x.value[t];
+			n && (typeof n.focus == "function" ? n.focus() : n.$el && typeof n.$el.focus == "function" && n.$el.focus());
+		}, W = () => k(b.value), K = (e) => {
+			w || !e || (S = !0, M(e, b.value), N(), l(() => {
+				S = !1;
+			}));
+		}, J = (e, t = b.value) => {
+			for (let n of t) {
+				if (n.name === e) return n;
+				if (n.type === "formBuilder" && Array.isArray(n.inputs)) {
+					let t = J(e, n.inputs);
+					if (t) return t;
+				}
+			}
 		}, Y = (e, t) => {
-			e.type === "formBuilder" && (e.value = t), O();
-		}, X = (e, t) => {
-			y("input", {
+			let n = J(e);
+			n && (n.value = t, N());
+		}, X = (e, t = b.value) => {
+			t.forEach((t) => {
+				if (t.type === "formBuilder" && Array.isArray(t.inputs)) {
+					X(e, t.inputs);
+					return;
+				}
+				t.responseKey && (t.value = y.get(e, t.responseKey));
+			}), N();
+		}, Z = (e = b.value) => {
+			e.forEach((e) => {
+				e.type === "formBuilder" ? (e.value = {}, Array.isArray(e.inputs) && Z(e.inputs)) : e.value = null;
+			}), N();
+		}, Q = (e, t = b.value) => {
+			t.forEach((t) => {
+				t.type === "formBuilder" && Array.isArray(t.inputs) ? Q(e, t.inputs) : t.disabled = e;
+			});
+		}, $ = (e, t = b.value) => {
+			t.forEach((t) => {
+				t.type === "formBuilder" && Array.isArray(t.inputs) ? $(e, t.inputs) : t.readonly = e;
+			});
+		}, ne = (e, t) => {
+			e.value = t, N();
+		}, re = (e, t) => {
+			e.type === "formBuilder" && (e.value = t), N();
+		}, ie = (e, t) => {
+			_("input", {
 				event: e,
 				index: t,
-				data: C.value
+				data: b.value
 			});
-		}, Z = (e, t) => {
-			y("change", {
+		}, ae = (e, t) => {
+			_("change", {
 				event: e,
 				index: t,
-				data: C.value
+				data: b.value
 			});
-		}, Q = (e, t) => {
-			y("onClick", {
+		}, oe = (e, t) => {
+			_("onClick", {
 				event: e,
 				input: t
 			});
 		};
-		return r({
-			focus: j,
-			getFormData: M,
-			setFormData: N,
-			getInputsByName: F,
-			setInputByName: I,
-			setInputValues: L,
-			clearValues: z,
-			disableAllInputs: B,
-			readonlyAllInputs: V
-		}), (r, a) => (m(), i("div", { class: d(["row form-builder-container", t.customClass]) }, [(m(!0), i(e, null, g(b(C), (e, a) => (m(), i("div", {
-			key: e.uid || a,
-			class: d(["form-builder-col", K(e)]),
-			style: f(q(e))
-		}, [(m(), n(v(U(e)), l({
+		return v(() => o.inputs || o.value, (e) => {
+			w || e && Array.isArray(e) && (F(e), O(), o.formData && Object.keys(o.formData).length > 0 && M(o.formData));
+		}, {
+			immediate: !0,
+			deep: !0
+		}), v(() => o.formData, (e) => {
+			w || !e || Object.keys(e).length === 0 || M(e);
+		}, { deep: !0 }), f(() => {
+			O();
+		}), r({
+			focus: U,
+			flattenFormData: A,
+			getFormData: W,
+			setFormData: K,
+			getInputsByName: J,
+			setInputByName: Y,
+			setInputValues: X,
+			clearValues: Z,
+			disableAllInputs: Q,
+			readonlyAllInputs: $
+		}), (r, a) => (p(), i("div", { class: u(["row form-builder-container", t.customClass]) }, [(p(!0), i(e, null, h(b.value, (e, r) => (p(), i("div", {
+			key: e.uid || r,
+			class: u(["form-builder-col", z(e)]),
+			style: d(V(e))
+		}, [(p(), n(g(L(e)), c({
+			"model-value": e.value,
 			ref_for: !0,
-			ref: (t) => b(w)(t, e),
-			"model-value": e.value
-		}, { ref_for: !0 }, W(e), {
-			disabled: t.disable || e.disabled,
-			readonly: e.readonly,
-			"onUpdate:modelValue": (t) => J(e, t),
-			"onUpdate:formData": (t) => Y(e, t),
-			onInput: (e) => X(e, a),
-			onChange: (e) => Z(e, a),
-			onClick: (t) => Q(t, e)
-		}), o({ _: 2 }, [g(G(e), (e) => ({
-			name: e,
-			fn: S((t) => [_(r.$slots, e, l({ ref_for: !0 }, t || {}), void 0, !0)])
-		}))]), 1040, [
+			ref: (t) => P(t, e)
+		}, { ref_for: !0 }, R(e), {
+			loading: t.loading || e.loading,
+			disabled: t.disabled || e.disabled,
+			readonly: t.readonly || e.readonly,
+			"onUpdate:modelValue": (t) => ne(e, t),
+			"onUpdate:formData": (t) => re(e, t),
+			onInput: (e) => ie(e, r),
+			onChange: (e) => ae(e, r),
+			onClick: (t) => oe(t, e)
+		}), null, 16, [
 			"model-value",
+			"loading",
 			"disabled",
 			"readonly",
 			"onUpdate:modelValue",
@@ -603,10 +575,6 @@ var D = { class: "form-builder-field" }, O = ["for"], k = [
 			"onClick"
 		]))], 6))), 128))], 2));
 	}
-}), ie = (e, t) => {
-	let n = e.__vccOpts || e;
-	for (let [e, r] of t) n[e] = r;
-	return n;
-}, ae = /* @__PURE__ */ T({ default: () => $ }), $ = /*#__PURE__*/ ie(Q, [["__scopeId", "data-v-77dcfe13"]]), oe = $;
+}), [["__scopeId", "data-v-4f895cec"]]), Y = J;
 //#endregion
-export { $ as FormBuilder, oe as default, E as useFormBuilder };
+export { J as FormBuilder, Y as default };

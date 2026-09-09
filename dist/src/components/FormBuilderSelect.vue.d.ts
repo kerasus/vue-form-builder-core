@@ -21,15 +21,15 @@ declare const __VLS_export: import('vue').DefineComponent<Props, {}, {}, {}, {},
     "onUpdate:modelValue"?: ((value: string | number | null) => any) | undefined;
     onChange?: ((value: Event) => any) | undefined;
 }>, {
-    label: string;
     name: string;
+    modelValue: string | number | null;
+    label: string;
     placeholder: string;
     disabled: boolean;
     readonly: boolean;
-    options: SelectOption[];
-    modelValue: string | number | null;
     id: string;
     required: boolean;
+    options: SelectOption[];
 }, {}, {}, {}, string, import('vue').ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
 export default _default;
