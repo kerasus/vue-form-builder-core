@@ -14,8 +14,10 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       dts({
+        entryRoot: 'src',
+        outDir: 'types',
         insertTypesEntry: true,
-        include: ['src/**/*.ts', 'src/**/*.vue', 'dev/**/*.ts', 'dev/**/*.vue'],
+        include: ['src/**/*.ts', 'src/**/*.vue'],
         rollupTypes: true
       })
     ],
