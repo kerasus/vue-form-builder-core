@@ -12,7 +12,7 @@
           :model-value="input.value"
           v-bind="getComponentProps(input)"
           :loading="resolveLoading(input)"
-          :disabled="resolveDisabled(input)"
+          :disable="resolveDisable(input)"
           :readonly="resolveReadonly(input)"
           @update:model-value="onFieldValueUpdate(input, $event)"
           @update:form-data="onNestedFormDataUpdated(input, $event)"
@@ -73,7 +73,7 @@ export interface FormInputItem {
   placeholder?: string
   col?: string
   uid?: string
-  disabled?: boolean
+  disable?: boolean
   readonly?: boolean
   loading?: boolean
   multiple?: boolean
@@ -97,8 +97,8 @@ export interface FormBuilderProps {
   formDataMode?: FormDataMode
   /** Global readonly state override */
   readonly?: boolean | undefined
-  /** Global disabled state override */
-  disabled?: boolean | undefined
+  /** Global disable state override */
+  disable?: boolean | undefined
   /** Global loading state override */
   loading?: boolean | undefined
 }
@@ -109,7 +109,7 @@ const props = withDefaults(defineProps<FormBuilderProps>(), {
   formData: () => ({}),
   formDataMode: 'nested',
   readonly: undefined,
-  disabled: undefined,
+  disable: undefined,
   loading: undefined
 })
 
@@ -150,9 +150,9 @@ const resolveReadonly = (input: FormInputItem): boolean => {
   return !!input.readonly
 }
 
-const resolveDisabled = (input: FormInputItem): boolean => {
-  if (props.disabled !== undefined) return props.disabled
-  return !!input.disabled
+const resolveDisable = (input: FormInputItem): boolean => {
+  if (props.disable !== undefined) return props.disable
+  return !!input.disable
 }
 
 const resolveLoading = (input: FormInputItem): boolean => {
@@ -364,7 +364,7 @@ const resolveComponent = (input: FormInputItem): Component | string => {
  * Filters out internal control properties prior to passing props down to dynamic components.
  */
 const getComponentProps = (input: FormInputItem): Record<string, any> => {
-  const { col, value, uid, readonly, disabled, loading, inputs, ...rest } = input
+  const { col, value, uid, readonly, disable, loading, inputs, ...rest } = input
 
   if (input.type === 'formBuilder') {
     return {
@@ -512,7 +512,7 @@ const clearValues = (inputs: FormInputItem[] = inputData.value): void => {
 }
 
 /**
- * Batch-updates the disabled state across all form items.
+ * Batch-updates the disable state across all form items.
  */
 const disableAllInputs = (status: boolean, inputs: FormInputItem[] = inputData.value): void => {
   for (let i = 0; i < inputs.length; i++) {
@@ -520,7 +520,7 @@ const disableAllInputs = (status: boolean, inputs: FormInputItem[] = inputData.v
     if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
       disableAllInputs(status, input.inputs)
     } else {
-      input.disabled = status
+      input.disable = status
     }
   }
 }
