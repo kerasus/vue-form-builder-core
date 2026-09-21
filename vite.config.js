@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
       vue(),
       dts({
         entryRoot: 'src',
-        outDir: 'types',
+        outDir: 'dist',
         insertTypesEntry: true,
         include: ['src/**/*.ts', 'src/**/*.vue'],
         rollupTypes: true
@@ -25,11 +25,13 @@ export default defineConfig(({ mode }) => {
       lib: {
         entry: resolve(import.meta.dirname, 'src/index.ts'),
         name: 'VueFormBuilderCore',
-        fileName: (format) => `vue-form-builder-core.${format === 'es' ? 'js' : 'umd.cjs'}`
+        fileName: (format) => `vue-form-builder-core.${format === 'es' ? 'js' : 'umd.cjs'}`,
+        formats: ['es', 'umd']
       },
       rollupOptions: {
         external: ['vue', 'shvl'],
         output: {
+          exports: 'named',
           globals: {
             vue: 'Vue',
             shvl: 'shvl'

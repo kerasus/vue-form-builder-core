@@ -1,6 +1,6 @@
 {
   "name": "vue-form-builder-core",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Headless and schema-driven form builder engine for Vue 3.",
   "type": "module",
   "main": "./dist/vue-form-builder-core.umd.cjs",
@@ -12,7 +12,8 @@
       "import": "./dist/vue-form-builder-core.js",
       "require": "./dist/vue-form-builder-core.umd.cjs"
     },
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./dist/style.css": "./dist/style.css"
   },
   "files": [
     "dist"
