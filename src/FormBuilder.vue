@@ -1,5 +1,5 @@
 <template>
-  <div class="row form-builder-container" :class="customClass">
+  <div class="row form-builder-container">
     <div
         v-for="(input, inputIndex) in inputData"
         :key="input.uid || inputIndex"
@@ -76,7 +76,6 @@ export interface FormInputItem {
   options?: Array<string | number | FormInputOption>
   inputs?: FormInputItem[]
   responseKey?: string
-  customClass?: string
   [key: string]: any
 }
 
@@ -90,7 +89,6 @@ interface Props {
   readonly?: boolean
   disabled?: boolean
   loading?: boolean
-  customClass?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -98,8 +96,7 @@ const props = withDefaults(defineProps<Props>(), {
   value: undefined,
   formData: () => ({}),
   readonly: false,
-  disabled: false,
-  customClass: ''
+  disabled: false
 })
 
 const emit = defineEmits<{
@@ -274,7 +271,7 @@ const resolveComponent = (input: FormInputItem): Component | string => {
 }
 
 const getComponentProps = (input: FormInputItem): Record<string, any> => {
-  const { col, customClass, value, uid, ...rest } = input
+  const { col, value, uid, ...rest } = input
 
   if (input.type === 'formBuilder') {
     return {
