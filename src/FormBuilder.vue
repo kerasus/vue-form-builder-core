@@ -6,17 +6,16 @@
         :class="['form-builder-col', getComponentCol(input)]"
         :style="getComponentStyle(input)"
     >
-      <!-- Dynamic Form Field Component -->
       <component
-          :model-value="input.value"
           :is="resolveComponent(input)"
-          :ref="(el: any) => setInputRef(el, input)"
+          :ref="(el: any) => registerRef(el, input)"
+          :model-value="input.value"
           v-bind="getComponentProps(input)"
-          :loading="loading || input.loading"
-          :disabled="disabled || input.disabled"
-          :readonly="readonly || input.readonly"
-          @update:model-value="(value: any) => onFieldValueUpdate(input, value)"
-          @update:form-data="(value: any) => onNestedFormDataUpdated(input, value)"
+          :loading="resolveLoading(input)"
+          :disabled="resolveDisabled(input)"
+          :readonly="resolveReadonly(input)"
+          @update:model-value="onFieldValueUpdate(input, $event)"
+          @update:form-data="onNestedFormDataUpdated(input, $event)"
           @input="onInput($event, inputIndex)"
           @change="onChange($event, inputIndex)"
           @click="onClick($event, input)"
@@ -30,6 +29,7 @@ import {
   ref,
   watch,
   onMounted,
+  onBeforeUnmount,
   nextTick,
   markRaw,
   toRaw,
@@ -39,7 +39,7 @@ import {
 } from 'vue'
 import * as shvl from 'shvl'
 
-// Native Component Imports
+// Native Component Fallbacks
 import FormBuilderInput from './components/FormBuilderInput.vue'
 import FormBuilderFile from './components/FormBuilderFile.vue'
 import FormBuilderTextarea from './components/FormBuilderTextarea.vue'
@@ -52,7 +52,11 @@ defineOptions({
   name: 'FormBuilder'
 })
 
-// --- Types & Interfaces ---
+// ==========================================
+// Types & Interfaces
+// ==========================================
+
+/** Data extraction strategy for nested FormBuilder instances. */
 export type FormDataMode = 'nested' | 'flat'
 
 export interface FormInputOption {
@@ -71,6 +75,7 @@ export interface FormInputItem {
   uid?: string
   disabled?: boolean
   readonly?: boolean
+  loading?: boolean
   multiple?: boolean
   rows?: number
   options?: Array<string | number | FormInputOption>
@@ -81,22 +86,31 @@ export interface FormInputItem {
 
 export type FormDataObject = Record<string, any>
 
-interface Props {
+export interface FormBuilderProps {
+  /** Form schema item definitions */
   inputs?: FormInputItem[]
-  value?: FormInputItem[] // Backward compatibility alias
+  /** Backward-compatible schema alias */
+  value?: FormInputItem[]
+  /** Initial or bound form key-value state */
   formData?: FormDataObject
+  /** Data shape resolution strategy: 'nested' preserves hierarchy, 'flat' flattens all sub-builders */
   formDataMode?: FormDataMode
-  readonly?: boolean
-  disabled?: boolean
-  loading?: boolean
+  /** Global readonly state override */
+  readonly?: boolean | undefined
+  /** Global disabled state override */
+  disabled?: boolean | undefined
+  /** Global loading state override */
+  loading?: boolean | undefined
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<FormBuilderProps>(), {
   inputs: undefined,
   value: undefined,
   formData: () => ({}),
-  readonly: false,
-  disabled: false
+  formDataMode: 'nested',
+  readonly: undefined,
+  disabled: undefined,
+  loading: undefined
 })
 
 const emit = defineEmits<{
@@ -108,116 +122,184 @@ const emit = defineEmits<{
   (e: 'onClick', payload: { event: MouseEvent; input: FormInputItem }): void
 }>()
 
-// --- State ---
+// ==========================================
+// Internal State
+// ==========================================
+
 const inputData = ref<FormInputItem[]>([]) as Ref<FormInputItem[]>
 const inputRefs = ref<Record<string, any>>({})
 
 let isSyncingFromFormData = false
 let isSyncingFromInputs = false
-
-// عددمحور کردن UID برای بهینه‌سازی سرعت تولید و حافظه
 let uidCounter = 0
+
+/**
+ * Generates an internal unique identifier for each schema item.
+ */
 const generateSimpleUid = (): string => {
   uidCounter += 1
   return `fb-id-${uidCounter}`
 }
 
-// --- Internal Helper Methods ---
+// ==========================================
+// Status Resolvers (Cascading tri-state)
+// ==========================================
 
-// Assign unique UIDs recursively using simple counter
+const resolveReadonly = (input: FormInputItem): boolean => {
+  if (props.readonly !== undefined) return props.readonly
+  return !!input.readonly
+}
+
+const resolveDisabled = (input: FormInputItem): boolean => {
+  if (props.disabled !== undefined) return props.disabled
+  return !!input.disabled
+}
+
+const resolveLoading = (input: FormInputItem): boolean => {
+  if (props.loading !== undefined) return props.loading
+  return !!input.loading
+}
+
+// ==========================================
+// Schema & Data Pipeline
+// ==========================================
+
+/**
+ * Recursively assigns unique IDs to schema items lacking one.
+ */
 const setUidForInputs = (inputs: FormInputItem[] = inputData.value): void => {
-  inputs.forEach((input) => {
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i]
     if (!input.uid) {
       input.uid = generateSimpleUid()
     }
-
     if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
       setUidForInputs(input.inputs)
     }
-  })
+  }
 }
 
-// Recursively extract formData key-value mapping from inputs array
+/**
+ * Extracts form values preserving schema hierarchy.
+ */
 const extractFormData = (inputs: FormInputItem[] = inputData.value): FormDataObject => {
   const data: FormDataObject = {}
 
-  inputs.forEach((input) => {
-    if (!input.name) return
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i]
+    if (!input.name) continue
 
     if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
-      data[input.name] = input.value ?? extractFormData(input.inputs)
+      data[input.name] = input.value !== undefined ? input.value : extractFormData(input.inputs)
     } else {
       data[input.name] = input.value !== undefined ? input.value : null
     }
-  })
+  }
 
   return data
 }
 
+/**
+ * Flattens arbitrary nested objects into a single-level dictionary.
+ */
 const flattenFormData = (data: FormDataObject): FormDataObject => {
   const result: FormDataObject = {}
 
-  Object.entries(data).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(data)) {
     if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
       Object.assign(result, flattenFormData(value))
     } else {
       result[key] = value
     }
-  })
+  }
 
   return result
 }
 
-// Recursively apply formData key-value updates to inputs schema
+/**
+ * Extracts form values while flattening nested FormBuilder groups only.
+ * Leaves non-group object payloads (e.g. QSelect options) intact.
+ */
+const flattenGroupInputs = (
+    inputs: FormInputItem[],
+    result: FormDataObject = {}
+): FormDataObject => {
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i]
+    if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
+      flattenGroupInputs(input.inputs, result)
+    } else if (input.name) {
+      if (input.name in result) {
+        console.warn(`[FormBuilder] Duplicate key "${input.name}" detected in flat mode.`)
+      }
+      result[input.name] = input.value !== undefined ? input.value : null
+    }
+  }
+  return result
+}
+
+/**
+ * Builds the current form data object according to the active `formDataMode`.
+ */
+const buildFormData = (inputs: FormInputItem[] = inputData.value): FormDataObject => {
+  if (props.formDataMode === 'flat') {
+    return flattenGroupInputs(inputs)
+  }
+  return extractFormData(inputs)
+}
+
+/**
+ * Populates schema item values from an incoming form data payload.
+ */
 const applyFormDataToInputs = (
     formData: FormDataObject,
     inputs: FormInputItem[] = inputData.value
 ): void => {
   if (!formData || typeof formData !== 'object') return
 
-  inputs.forEach((input) => {
-    if (!input.name || !(input.name in formData)) return
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i]
+    if (!input.name) continue
 
-    const incomingValue = formData[input.name]
-
-    if (
-        input.type === 'formBuilder' &&
-        Array.isArray(input.inputs) &&
-        incomingValue &&
-        typeof incomingValue === 'object'
-    ) {
-      applyFormDataToInputs(incomingValue, input.inputs)
-      input.value = { ...incomingValue }
-    } else {
-      input.value = incomingValue
+    if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
+      if (props.formDataMode === 'flat') {
+        // Direct root lookup when in flat mode
+        applyFormDataToInputs(formData, input.inputs)
+      } else {
+        const incomingValue = formData[input.name]
+        if (incomingValue && typeof incomingValue === 'object') {
+          applyFormDataToInputs(incomingValue, input.inputs)
+          input.value = { ...incomingValue }
+        }
+      }
+    } else if (input.name in formData) {
+      input.value = formData[input.name]
     }
-  })
+  }
 }
 
-// Sync and notify parent/listeners
+/**
+ * Emits the updated schema and resolved form payload.
+ */
 const syncState = (): void => {
   if (isSyncingFromFormData) return
 
   isSyncingFromInputs = true
-  const calculatedFormData = extractFormData(inputData.value)
+  const calculatedFormData = buildFormData(inputData.value)
 
   emit('update:inputs', inputData.value)
   emit('update:value', inputData.value)
-
-  const finalFormData =
-      props.formDataMode === 'flat'
-          ? flattenFormData(calculatedFormData)
-          : calculatedFormData
-
-  emit('update:formData', finalFormData)
+  emit('update:formData', calculatedFormData)
 
   nextTick(() => {
     isSyncingFromInputs = false
   })
 }
 
-// Register DOM / Component refs dynamically
-const setInputRef = (el: any, input: FormInputItem): void => {
+/**
+ * Registers component references with garbage-collection cleanup.
+ */
+const registerRef = (el: any, input: FormInputItem): void => {
   if (!input.name) return
   const key = `input-${input.name}-${input.uid || ''}`
   if (el) {
@@ -227,20 +309,28 @@ const setInputRef = (el: any, input: FormInputItem): void => {
   }
 }
 
+/**
+ * Deep-clones a schema item and marks non-reactive component definitions raw.
+ */
+const cloneInputItem = (item: FormInputItem): FormInputItem => {
+  const cloned: FormInputItem = { ...item }
+  if (typeof cloned.type === 'object' || typeof cloned.type === 'function') {
+    cloned.type = markRaw(toRaw(cloned.type))
+  }
+  if (cloned.type === 'formBuilder' && Array.isArray(cloned.inputs)) {
+    cloned.inputs = cloned.inputs.map(cloneInputItem)
+  }
+  return cloned
+}
+
 const setInputs = (newInputs: FormInputItem[]): void => {
-  inputData.value = newInputs.map((input) => {
-    if (typeof input.type === 'object' || typeof input.type === 'function') {
-      return {
-        ...input,
-        type: markRaw(toRaw(input.type))
-      }
-    }
-    return { ...input }
-  })
+  inputData.value = newInputs.map(cloneInputItem)
   setUidForInputs(inputData.value)
 }
 
-// --- Dynamic Component Rendering Logic ---
+// ==========================================
+// Component Resolution Map
+// ==========================================
 
 const nativeComponentMap: Record<string, Component> = {
   text: FormBuilderInput,
@@ -270,16 +360,23 @@ const resolveComponent = (input: FormInputItem): Component | string => {
   return FormBuilderInput
 }
 
+/**
+ * Filters out internal control properties prior to passing props down to dynamic components.
+ */
 const getComponentProps = (input: FormInputItem): Record<string, any> => {
-  const { col, value, uid, ...rest } = input
+  const { col, value, uid, readonly, disabled, loading, inputs, ...rest } = input
 
   if (input.type === 'formBuilder') {
     return {
       ...rest,
-      formData: value || {}
+      inputs,
+      formData:
+          props.formDataMode === 'flat'
+              ? flattenGroupInputs(input.inputs || [])
+              : (value || {}),
+      formDataMode: props.formDataMode
     }
   }
-
   return rest
 }
 
@@ -290,12 +387,14 @@ const getComponentCol = (input: FormInputItem): string => {
 
 const getComponentStyle = (input: FormInputItem): CSSProperties => {
   if (input.type === 'hidden') {
-    return { display: 'none', padding: 0, margin: 0 }
+    return { display: 'none', padding: '0px', margin: '0px' }
   }
   return {}
 }
 
-// --- Exposed Form API Methods ---
+// ==========================================
+// Public API Methods
+// ==========================================
 
 const getFirstInput = (inputs: FormInputItem[] = inputData.value): FormInputItem | null => {
   for (const input of inputs) {
@@ -309,6 +408,9 @@ const getFirstInput = (inputs: FormInputItem[] = inputData.value): FormInputItem
   return null
 }
 
+/**
+ * Focuses the first available interactive form input field.
+ */
 const focus = (): void => {
   const firstInput = getFirstInput()
   if (!firstInput) return
@@ -323,10 +425,16 @@ const focus = (): void => {
   }
 }
 
+/**
+ * Returns the current evaluated form data matching the active mode.
+ */
 const getFormData = (): FormDataObject => {
-  return extractFormData(inputData.value)
+  return buildFormData(inputData.value)
 }
 
+/**
+ * Ingests and applies a new form data payload to the current inputs schema.
+ */
 const setFormData = (data: FormDataObject): void => {
   if (isSyncingFromInputs || !data) return
   isSyncingFromFormData = true
@@ -337,6 +445,9 @@ const setFormData = (data: FormDataObject): void => {
   })
 }
 
+/**
+ * Finds a schema item definition by its `name`.
+ */
 const getInputsByName = (
     name: string,
     inputs: FormInputItem[] = inputData.value
@@ -351,6 +462,9 @@ const getInputsByName = (
   return undefined
 }
 
+/**
+ * Updates a specific input's value by name and triggers sync.
+ */
 const setInputByName = (name: string, value: any): void => {
   const target = getInputsByName(name)
   if (target) {
@@ -359,24 +473,32 @@ const setInputByName = (name: string, value: any): void => {
   }
 }
 
+/**
+ * Maps an external response object to inputs matching their `responseKey`.
+ */
 const setInputValues = (
     responseData: Record<string, any>,
     inputs: FormInputItem[] = inputData.value
 ): void => {
-  inputs.forEach((input) => {
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i]
     if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
       setInputValues(responseData, input.inputs)
-      return
+      continue
     }
     if (input.responseKey) {
       input.value = shvl.get(responseData, input.responseKey)
     }
-  })
+  }
   syncState()
 }
 
+/**
+ * Resets all input values to null or empty objects.
+ */
 const clearValues = (inputs: FormInputItem[] = inputData.value): void => {
-  inputs.forEach((input) => {
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i]
     if (input.type === 'formBuilder') {
       input.value = {}
       if (Array.isArray(input.inputs)) {
@@ -385,31 +507,41 @@ const clearValues = (inputs: FormInputItem[] = inputData.value): void => {
     } else {
       input.value = null
     }
-  })
+  }
   syncState()
 }
 
+/**
+ * Batch-updates the disabled state across all form items.
+ */
 const disableAllInputs = (status: boolean, inputs: FormInputItem[] = inputData.value): void => {
-  inputs.forEach((input) => {
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i]
     if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
       disableAllInputs(status, input.inputs)
     } else {
       input.disabled = status
     }
-  })
+  }
 }
 
+/**
+ * Batch-updates the readonly state across all form items.
+ */
 const readonlyAllInputs = (status: boolean, inputs: FormInputItem[] = inputData.value): void => {
-  inputs.forEach((input) => {
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i]
     if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
       readonlyAllInputs(status, input.inputs)
     } else {
       input.readonly = status
     }
-  })
+  }
 }
 
-// --- Event Handlers ---
+// ==========================================
+// Event Listeners
+// ==========================================
 
 const onFieldValueUpdate = (input: FormInputItem, value: any): void => {
   input.value = value
@@ -417,7 +549,7 @@ const onFieldValueUpdate = (input: FormInputItem, value: any): void => {
 }
 
 const onNestedFormDataUpdated = (input: FormInputItem, value: any): void => {
-  if (input.type === 'formBuilder') {
+  if (input.type === 'formBuilder' && props.formDataMode !== 'flat') {
     input.value = value
   }
   syncState()
@@ -443,15 +575,17 @@ const onClick = (event: MouseEvent, input: FormInputItem): void => {
   emit('onClick', { event, input })
 }
 
-// --- Watchers & Lifecycle ---
+// ==========================================
+// Watchers & Lifecycle Hooks
+// ==========================================
 
 watch(
     () => props.inputs || props.value,
     (newInputs) => {
       if (isSyncingFromInputs) return
+      if (newInputs === inputData.value) return
       if (newInputs && Array.isArray(newInputs)) {
         setInputs(newInputs)
-        setUidForInputs()
         if (props.formData && Object.keys(props.formData).length > 0) {
           applyFormDataToInputs(props.formData)
         }
@@ -476,7 +610,10 @@ onMounted(() => {
   setUidForInputs()
 })
 
-// Expose public API methods for template refs
+onBeforeUnmount(() => {
+  inputRefs.value = {}
+})
+
 defineExpose({
   focus,
   flattenFormData,
