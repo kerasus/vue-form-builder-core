@@ -8,7 +8,7 @@
     >
       <component
           :is="resolveComponent(input)"
-          v-memo="[input.value, input.disable, input.readonly, input.loading]"
+          v-memo="[input.type, input.value, input.disable, input.readonly, input.loading]"
           :ref="(el: any) => registerRef(el, input)"
           :model-value="input.value"
           v-bind="getComponentProps(input)"
@@ -102,6 +102,7 @@ export interface FormBuilderProps {
   disable?: boolean | undefined
   /** Global loading state override */
   loading?: boolean | undefined
+  customComponents?: Record<string, Component>
 }
 
 const props = withDefaults(defineProps<FormBuilderProps>(), {
@@ -111,7 +112,8 @@ const props = withDefaults(defineProps<FormBuilderProps>(), {
   formDataMode: 'nested',
   readonly: undefined,
   disable: undefined,
-  loading: undefined
+  loading: undefined,
+  customComponents: () => ({})
 })
 
 const emit = defineEmits<{
@@ -254,31 +256,42 @@ const buildFormData = (inputs: FormInputItem[] = inputData.value): FormDataObjec
  */
 const applyFormDataToInputs = (
     formData: FormDataObject,
-    inputs: FormInputItem[] = inputData.value
+    inputs?: FormInputItem[]
 ): void => {
   if (!formData || typeof formData !== 'object') return
 
-  for (let i = 0; i < inputs.length; i++) {
-    const input = inputs[i]
-    if (!input.name) continue
+  // حتماً تارگت رو روی inputData بگذار اگر پاس داده نشده بود
+  const targetInputs = inputs || inputData.value
+  if (!Array.isArray(targetInputs)) return
 
+  for (let i = 0; i < targetInputs.length; i++) {
+    const input = targetInputs[i]
+    if (!input) continue
+
+    // ۱. اگر فیلد از نوع formBuilder تودرتو است
     if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
       if (props.formDataMode === 'flat') {
+        // در حالت Flat کل دیتای والد به فرزندان پاس داده می‌شود
         applyFormDataToInputs(formData, input.inputs)
-      } else {
-        const incomingValue = formData[input.name]
-        if (incomingValue && typeof incomingValue === 'object') {
-          applyFormDataToInputs(incomingValue, input.inputs)
-          if (JSON.stringify(input.value) !== JSON.stringify(incomingValue)) {
-            input.value = { ...incomingValue }
-          }
+      } else if (input.name && input.name in formData) {
+        const nestedData = formData[input.name]
+        if (nestedData && typeof nestedData === 'object') {
+          applyFormDataToInputs(nestedData as FormDataObject, input.inputs)
         }
       }
-    } else if (input.name in formData) {
-      const newVal = formData[input.name]
-      if (input.value !== newVal) {
-        input.value = newVal
-      }
+      continue
+    }
+
+    // ۲. فیلدهای عادی (Separatorها و المان‌های بدون name رد می‌شوند)
+    if (!input.name || !(input.name in formData)) {
+      continue
+    }
+
+    const newVal = formData[input.name]
+
+    // فقط مقدار .value تغییر می‌کند؛ دست به ساختار آیتم نزن!
+    if (input.value !== newVal) {
+      input.value = newVal
     }
   }
 }
@@ -359,6 +372,9 @@ const resolveComponent = (input: FormInputItem): Component | string => {
   if (input.type === 'formBuilder') {
     return 'FormBuilder'
   }
+  if (typeof input.type === 'string' && props.customComponents[input.type]) {
+    return props.customComponents[input.type]
+  }
   if (typeof input.type === 'string' && nativeComponentMap[input.type]) {
     return nativeComponentMap[input.type]
   }
@@ -375,6 +391,7 @@ const getComponentProps = (input: FormInputItem): Record<string, any> => {
     return {
       ...rest,
       inputs,
+      customComponents: props.customComponents,
       formData:
           props.formDataMode === 'flat'
               ? flattenGroupInputs(input.inputs || [])
@@ -584,19 +601,43 @@ const onClick = (event: MouseEvent, input: FormInputItem): void => {
 // Watchers & Lifecycle Hooks
 // ==========================================
 
+// در FormBuilder.vue (Core)
 watch(
     () => props.inputs || props.value,
     (newInputs) => {
-      if (isSyncingFromInputs) return
+      if (isSyncingFromInputs) return // این فلگ خیلی مهمه!
+      if (!newInputs || !Array.isArray(newInputs)) return
+
+      // اگر دیتای ورودی دقیقاً همین رفرنس فعلی هست کاری نکن
       if (newInputs === inputData.value) return
-      if (newInputs && Array.isArray(newInputs)) {
-        setInputs(newInputs)
-        if (props.formData && Object.keys(props.formData).length > 0) {
-          applyFormDataToInputs(props.formData)
+
+      // اگر فقط مقادیر value تغییر کرده‌اند، ساختار رو از اول نساز
+      if (inputData.value.length === newInputs.length) {
+        let isStructureSame = true
+        for (let i = 0; i < newInputs.length; i++) {
+          if (inputData.value[i]?.name !== newInputs[i]?.name || inputData.value[i]?.type !== newInputs[i]?.type) {
+            isStructureSame = false
+            break
+          }
+        }
+        if (isStructureSame) {
+          // ساختار یکیه، فقط مقدارها رو سینک کن بدون بازسازی کل DOM
+          for (let i = 0; i < newInputs.length; i++) {
+            if (inputData.value[i].value !== newInputs[i].value) {
+              inputData.value[i].value = newInputs[i].value
+            }
+          }
+          return
         }
       }
+
+      // اگر ساختار واقعاً عوض شده (مثلاً فیلدی کم یا زیاد شده):
+      setInputs(newInputs)
+      if (props.formData && Object.keys(props.formData).length > 0) {
+        applyFormDataToInputs(props.formData)
+      }
     },
-    { immediate: true, deep: true }
+    { immediate: true } // 👈 deep: true را از اینجا هم بردار!
 )
 
 watch(
