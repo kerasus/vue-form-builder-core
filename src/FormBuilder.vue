@@ -8,7 +8,6 @@
     >
       <component
           :is="resolveComponent(input)"
-          v-memo="[input.type, input.value, input.disable, input.readonly, input.loading]"
           :ref="(el: any) => registerRef(el, input)"
           :model-value="input.value"
           v-bind="getComponentProps(input)"
@@ -34,6 +33,7 @@ import {
   nextTick,
   markRaw,
   toRaw,
+  useAttrs,
   type Component,
   type CSSProperties,
   type Ref
@@ -75,9 +75,6 @@ export interface FormInputItem {
   placeholder?: string
   col?: string
   uid?: string
-  disable?: boolean
-  readonly?: boolean
-  loading?: boolean
   multiple?: boolean
   rows?: number
   options?: Array<string | number | FormInputOption>
@@ -97,12 +94,6 @@ export interface FormBuilderProps {
   formData?: FormDataObject
   /** Data shape resolution strategy: 'nested' preserves hierarchy, 'flat' flattens all sub-builders */
   formDataMode?: FormDataMode
-  /** Global readonly state override */
-  readonly?: boolean | undefined
-  /** Global disable state override */
-  disable?: boolean | undefined
-  /** Global loading state override */
-  loading?: boolean | undefined
   customComponents?: Record<string, Component>
 }
 
@@ -111,9 +102,6 @@ const props = withDefaults(defineProps<FormBuilderProps>(), {
   value: undefined,
   formData: () => ({}),
   formDataMode: 'nested',
-  readonly: undefined,
-  disable: undefined,
-  loading: undefined,
   customComponents: () => ({})
 })
 
@@ -125,6 +113,8 @@ const emit = defineEmits<{
   (e: 'change', payload: { event: Event; index: number; data: FormInputItem[] }): void
   (e: 'onClick', payload: { event: MouseEvent; input: FormInputItem }): void
 }>()
+
+const attrs = useAttrs()
 
 // ==========================================
 // Internal State
@@ -150,17 +140,17 @@ const generateSimpleUid = (): string => {
 // ==========================================
 
 const resolveReadonly = (input: FormInputItem): boolean => {
-  if (props.readonly !== undefined) return props.readonly
+  if (attrs.readonly !== undefined) return attrs.readonly as boolean
   return !!input.readonly
 }
 
 const resolveDisable = (input: FormInputItem): boolean => {
-  if (props.disable !== undefined) return props.disable
+  if (attrs.disable !== undefined) return attrs.disable as boolean
   return !!input.disable
 }
 
 const resolveLoading = (input: FormInputItem): boolean => {
-  if (props.loading !== undefined) return props.loading
+  if (attrs.loading !== undefined) return attrs.loading as boolean
   return !!input.loading
 }
 
@@ -331,20 +321,29 @@ const registerRef = (el: any, input: FormInputItem): void => {
 /**
  * Deep-clones a schema item and marks non-reactive component definitions raw.
  */
+/**
+ * Deep-clones a schema item and ensures a UID exists.
+ */
 const cloneInputItem = (item: FormInputItem): FormInputItem => {
   const cloned: FormInputItem = { ...item }
+
+  if (!cloned.uid) {
+    cloned.uid = generateSimpleUid()
+  }
+
   if (typeof cloned.type === 'object' || typeof cloned.type === 'function') {
     cloned.type = markRaw(toRaw(cloned.type))
   }
+
   if (cloned.type === 'formBuilder' && Array.isArray(cloned.inputs)) {
     cloned.inputs = cloned.inputs.map(cloneInputItem)
   }
+
   return cloned
 }
 
 const setInputs = (newInputs: FormInputItem[]): void => {
   inputData.value = newInputs.map(cloneInputItem)
-  setUidForInputs(inputData.value)
 }
 
 // ==========================================
@@ -638,7 +637,7 @@ watch(
         applyFormDataToInputs(props.formData)
       }
     },
-    { immediate: true } // 👈 deep: true را از اینجا هم بردار!
+    { immediate: true }
 )
 
 watch(
@@ -654,7 +653,7 @@ watch(
 )
 
 onMounted(() => {
-  setUidForInputs()
+  setUidForInputs(inputData.value)
 })
 
 onBeforeUnmount(() => {
