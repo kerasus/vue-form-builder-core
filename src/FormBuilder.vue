@@ -8,6 +8,7 @@
     >
       <component
           :is="resolveComponent(input)"
+          v-memo="[input.value, input.disable, input.readonly, input.loading]"
           :ref="(el: any) => registerRef(el, input)"
           :model-value="input.value"
           v-bind="getComponentProps(input)"
@@ -263,17 +264,21 @@ const applyFormDataToInputs = (
 
     if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
       if (props.formDataMode === 'flat') {
-        // Direct root lookup when in flat mode
         applyFormDataToInputs(formData, input.inputs)
       } else {
         const incomingValue = formData[input.name]
         if (incomingValue && typeof incomingValue === 'object') {
           applyFormDataToInputs(incomingValue, input.inputs)
-          input.value = { ...incomingValue }
+          if (JSON.stringify(input.value) !== JSON.stringify(incomingValue)) {
+            input.value = { ...incomingValue }
+          }
         }
       }
     } else if (input.name in formData) {
-      input.value = formData[input.name]
+      const newVal = formData[input.name]
+      if (input.value !== newVal) {
+        input.value = newVal
+      }
     }
   }
 }
