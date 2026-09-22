@@ -1,5 +1,5 @@
 <template>
-  <div class="row form-builder-container">
+  <div :class="['row', 'form-builder-container', $attrs.class]">
     <div
         v-for="(input, inputIndex) in inputData"
         :key="input.uid || inputIndex"
