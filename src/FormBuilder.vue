@@ -50,7 +50,8 @@ import FormBuilderRadio from './components/FormBuilderRadio.vue'
 import FormBuilderHidden from './components/FormBuilderHidden.vue'
 
 defineOptions({
-  name: 'FormBuilder'
+  name: 'FormBuilder',
+  inheritAttrs: false
 })
 
 // ==========================================
