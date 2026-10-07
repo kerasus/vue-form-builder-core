@@ -21,6 +21,7 @@ export interface FormInputItem {
     options?: Array<string | number | FormInputOption>
     responseKey?: string
     customClass?: string
+    rules?: any
     [key: string]: any
 }
 

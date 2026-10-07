@@ -1,25 +1,55 @@
 <template>
   <input
+      :id="name"
       ref="hiddenRef"
-      :value="modelValue"
       type="hidden"
       :name="name"
+      :value="normalizedValue"
   />
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-interface Props {
+export interface Props {
   name: string
-  modelValue?: any
+  modelValue?: string | number | boolean | null
 }
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: ''
+})
 
 const hiddenRef = ref<HTMLInputElement | null>(null)
 
+/**
+ * Normalizes model value to a safe HTML input value string.
+ */
+const normalizedValue = computed<string>(() => {
+  if (props.modelValue === null || props.modelValue === undefined) {
+    return ''
+  }
+  return String(props.modelValue)
+})
+
+/**
+ * Formal validate method for form lifecycle consistency.
+ * Always resolves to true unless extended.
+ */
+const validate = async (): Promise<boolean> => {
+  return true
+}
+
+/**
+ * Resets the validation state for form lifecycle consistency.
+ */
+const resetValidation = (): void => {
+  // No-op for hidden inputs
+}
+
 defineExpose({
-  hiddenRef
+  hiddenRef,
+  validate,
+  resetValidation
 })
 </script>

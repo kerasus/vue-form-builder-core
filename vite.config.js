@@ -29,12 +29,13 @@ export default defineConfig(({ mode }) => {
         formats: ['es', 'umd']
       },
       rollupOptions: {
-        external: ['vue', 'shvl'],
+        external: ['vue', 'shvl', '@vee-validate/rules'],
         output: {
           exports: 'named',
           globals: {
             vue: 'Vue',
-            shvl: 'shvl'
+            shvl: 'shvl',
+            '@vee-validate/rules': 'VeeValidateRules'
           }
         }
       }

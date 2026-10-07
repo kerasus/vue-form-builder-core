@@ -27,20 +27,28 @@
 <script lang="ts" setup>
 import {
   ref,
+  shallowRef,
   watch,
+  toRaw,
+  markRaw,
+  provide,
+  nextTick,
+  useAttrs,
   onMounted,
   onBeforeUnmount,
-  nextTick,
-  markRaw,
-  toRaw,
-  useAttrs,
   type Component,
   type CSSProperties,
   type Ref
 } from 'vue'
 import * as shvl from 'shvl'
+import {
+  createFormBuilderValidation,
+  FORM_VALIDATOR_KEY,
+  type ValidationConfig,
+  type ValidationRule
+} from './composables/useInputRules'
 
-// Native Component Fallbacks
+// Standard Built-in Form Components
 import FormBuilderInput from './components/FormBuilderInput.vue'
 import FormBuilderFile from './components/FormBuilderFile.vue'
 import FormBuilderTextarea from './components/FormBuilderTextarea.vue'
@@ -58,7 +66,6 @@ defineOptions({
 // Types & Interfaces
 // ==========================================
 
-/** Data extraction strategy for nested FormBuilder instances. */
 export type FormDataMode = 'nested' | 'flat'
 
 export interface FormInputOption {
@@ -92,9 +99,23 @@ export interface FormBuilderProps {
   value?: FormInputItem[]
   /** Initial or bound form key-value state */
   formData?: FormDataObject
-  /** Data shape resolution strategy: 'nested' preserves hierarchy, 'flat' flattens all sub-builders */
+  /** Data resolution strategy: 'nested' preserves hierarchy, 'flat' flattens sub-builders */
   formDataMode?: FormDataMode
+  /** Map of registered custom UI components */
   customComponents?: Record<string, Component>
+  /** Optional i18n translation delegate */
+  i18n?: ValidationConfig['i18n']
+  /** Custom validation rules merged into engine */
+  customRules?: Record<string, ValidationRule>
+  /** Active locale identifier (e.g. 'fa' | 'en') */
+  locale?: string
+  /** Custom rule messages dictionary */
+  messages?: ValidationConfig['messages']
+}
+
+export interface FormValidationReport {
+  valid: boolean
+  errors: Record<string, string | null>
 }
 
 const props = withDefaults(defineProps<FormBuilderProps>(), {
@@ -102,7 +123,11 @@ const props = withDefaults(defineProps<FormBuilderProps>(), {
   value: undefined,
   formData: () => ({}),
   formDataMode: 'nested',
-  customComponents: () => ({})
+  customComponents: () => ({}),
+  i18n: undefined,
+  customRules: () => ({}),
+  locale: 'fa',
+  messages: undefined
 })
 
 const emit = defineEmits<{
@@ -114,6 +139,19 @@ const emit = defineEmits<{
   (e: 'onClick', payload: { event: MouseEvent; input: FormInputItem }): void
 }>()
 
+// ==========================================
+// Validation Pipeline (Provide / Inject)
+// ==========================================
+
+const validator = createFormBuilderValidation({
+  locale: props.locale,
+  i18n: props.i18n,
+  customRules: props.customRules,
+  messages: props.messages
+})
+
+provide(FORM_VALIDATOR_KEY, validator)
+
 const attrs = useAttrs()
 
 // ==========================================
@@ -121,15 +159,12 @@ const attrs = useAttrs()
 // ==========================================
 
 const inputData = ref<FormInputItem[]>([]) as Ref<FormInputItem[]>
-const inputRefs = ref<Record<string, any>>({})
+const inputRefs = shallowRef<Record<string, any>>({})
 
 let isSyncingFromFormData = false
 let isSyncingFromInputs = false
 let uidCounter = 0
 
-/**
- * Generates an internal unique identifier for each schema item.
- */
 const generateSimpleUid = (): string => {
   uidCounter += 1
   return `fb-id-${uidCounter}`
@@ -158,9 +193,6 @@ const resolveLoading = (input: FormInputItem): boolean => {
 // Schema & Data Pipeline
 // ==========================================
 
-/**
- * Recursively assigns unique IDs to schema items lacking one.
- */
 const setUidForInputs = (inputs: FormInputItem[] = inputData.value): void => {
   for (let i = 0; i < inputs.length; i++) {
     const input = inputs[i]
@@ -173,9 +205,6 @@ const setUidForInputs = (inputs: FormInputItem[] = inputData.value): void => {
   }
 }
 
-/**
- * Extracts form values preserving schema hierarchy.
- */
 const extractFormData = (inputs: FormInputItem[] = inputData.value): FormDataObject => {
   const data: FormDataObject = {}
 
@@ -193,9 +222,6 @@ const extractFormData = (inputs: FormInputItem[] = inputData.value): FormDataObj
   return data
 }
 
-/**
- * Flattens arbitrary nested objects into a single-level dictionary.
- */
 const flattenFormData = (data: FormDataObject): FormDataObject => {
   const result: FormDataObject = {}
 
@@ -210,10 +236,6 @@ const flattenFormData = (data: FormDataObject): FormDataObject => {
   return result
 }
 
-/**
- * Extracts form values while flattening nested FormBuilder groups only.
- * Leaves non-group object payloads (e.g. QSelect options) intact.
- */
 const flattenGroupInputs = (
     inputs: FormInputItem[],
     result: FormDataObject = {}
@@ -224,7 +246,7 @@ const flattenGroupInputs = (
       flattenGroupInputs(input.inputs, result)
     } else if (input.name) {
       if (input.name in result) {
-        console.warn(`[FormBuilder] Duplicate key "${input.name}" detected in flat mode.`)
+        console.warn(`[FormBuilder] Duplicate field key "${input.name}" detected in flat mode.`)
       }
       result[input.name] = input.value !== undefined ? input.value : null
     }
@@ -232,9 +254,6 @@ const flattenGroupInputs = (
   return result
 }
 
-/**
- * Builds the current form data object according to the active `formDataMode`.
- */
 const buildFormData = (inputs: FormInputItem[] = inputData.value): FormDataObject => {
   if (props.formDataMode === 'flat') {
     return flattenGroupInputs(inputs)
@@ -242,16 +261,12 @@ const buildFormData = (inputs: FormInputItem[] = inputData.value): FormDataObjec
   return extractFormData(inputs)
 }
 
-/**
- * Populates schema item values from an incoming form data payload.
- */
 const applyFormDataToInputs = (
     formData: FormDataObject,
     inputs?: FormInputItem[]
 ): void => {
   if (!formData || typeof formData !== 'object') return
 
-  // حتماً تارگت رو روی inputData بگذار اگر پاس داده نشده بود
   const targetInputs = inputs || inputData.value
   if (!Array.isArray(targetInputs)) return
 
@@ -259,10 +274,8 @@ const applyFormDataToInputs = (
     const input = targetInputs[i]
     if (!input) continue
 
-    // ۱. اگر فیلد از نوع formBuilder تودرتو است
     if (input.type === 'formBuilder' && Array.isArray(input.inputs)) {
       if (props.formDataMode === 'flat') {
-        // در حالت Flat کل دیتای والد به فرزندان پاس داده می‌شود
         applyFormDataToInputs(formData, input.inputs)
       } else if (input.name && input.name in formData) {
         const nestedData = formData[input.name]
@@ -273,23 +286,17 @@ const applyFormDataToInputs = (
       continue
     }
 
-    // ۲. فیلدهای عادی (Separatorها و المان‌های بدون name رد می‌شوند)
     if (!input.name || !(input.name in formData)) {
       continue
     }
 
     const newVal = formData[input.name]
-
-    // فقط مقدار .value تغییر می‌کند؛ دست به ساختار آیتم نزن!
     if (input.value !== newVal) {
       input.value = newVal
     }
   }
 }
 
-/**
- * Emits the updated schema and resolved form payload.
- */
 const syncState = (): void => {
   if (isSyncingFromFormData) return
 
@@ -305,9 +312,6 @@ const syncState = (): void => {
   })
 }
 
-/**
- * Registers component references with garbage-collection cleanup.
- */
 const registerRef = (el: any, input: FormInputItem): void => {
   if (!input.name) return
   const key = `input-${input.name}-${input.uid || ''}`
@@ -318,12 +322,6 @@ const registerRef = (el: any, input: FormInputItem): void => {
   }
 }
 
-/**
- * Deep-clones a schema item and marks non-reactive component definitions raw.
- */
-/**
- * Deep-clones a schema item and ensures a UID exists.
- */
 const cloneInputItem = (item: FormInputItem): FormInputItem => {
   const cloned: FormInputItem = { ...item }
 
@@ -381,9 +379,6 @@ const resolveComponent = (input: FormInputItem): Component | string => {
   return FormBuilderInput
 }
 
-/**
- * Filters out internal control properties prior to passing props down to dynamic components.
- */
 const getComponentProps = (input: FormInputItem): Record<string, any> => {
   const { col, value, uid, readonly, disable, loading, inputs, ...rest } = input
 
@@ -430,9 +425,6 @@ const getFirstInput = (inputs: FormInputItem[] = inputData.value): FormInputItem
   return null
 }
 
-/**
- * Focuses the first available interactive form input field.
- */
 const focus = (): void => {
   const firstInput = getFirstInput()
   if (!firstInput) return
@@ -448,15 +440,47 @@ const focus = (): void => {
 }
 
 /**
- * Returns the current evaluated form data matching the active mode.
+ * Validates all registered field instances asynchronously.
  */
+const validate = async (): Promise<FormValidationReport> => {
+  let isAllValid = true
+  const errors: Record<string, string | null> = {}
+
+  for (const [key, refInstance] of Object.entries(inputRefs.value)) {
+    if (!refInstance) continue
+
+    if (typeof refInstance.validate === 'function') {
+      const isValid = await refInstance.validate()
+      const fieldError = refInstance.errorMessage || null
+
+      if (!isValid) {
+        isAllValid = false
+      }
+      errors[key] = fieldError
+    }
+  }
+
+  return {
+    valid: isAllValid,
+    errors
+  }
+}
+
+/**
+ * Clears errors and validation states on all mounted inputs.
+ */
+const resetValidation = (): void => {
+  for (const refInstance of Object.values(inputRefs.value)) {
+    if (refInstance && typeof refInstance.resetValidation === 'function') {
+      refInstance.resetValidation()
+    }
+  }
+}
+
 const getFormData = (): FormDataObject => {
   return buildFormData(inputData.value)
 }
 
-/**
- * Ingests and applies a new form data payload to the current inputs schema.
- */
 const setFormData = (data: FormDataObject): void => {
   if (isSyncingFromInputs || !data) return
   isSyncingFromFormData = true
@@ -467,9 +491,6 @@ const setFormData = (data: FormDataObject): void => {
   })
 }
 
-/**
- * Finds a schema item definition by its `name`.
- */
 const getInputsByName = (
     name: string,
     inputs: FormInputItem[] = inputData.value
@@ -484,9 +505,6 @@ const getInputsByName = (
   return undefined
 }
 
-/**
- * Updates a specific input's value by name and triggers sync.
- */
 const setInputByName = (name: string, value: any): void => {
   const target = getInputsByName(name)
   if (target) {
@@ -495,9 +513,6 @@ const setInputByName = (name: string, value: any): void => {
   }
 }
 
-/**
- * Maps an external response object to inputs matching their `responseKey`.
- */
 const setInputValues = (
     responseData: Record<string, any>,
     inputs: FormInputItem[] = inputData.value
@@ -515,9 +530,6 @@ const setInputValues = (
   syncState()
 }
 
-/**
- * Resets all input values to null or empty objects.
- */
 const clearValues = (inputs: FormInputItem[] = inputData.value): void => {
   for (let i = 0; i < inputs.length; i++) {
     const input = inputs[i]
@@ -533,9 +545,6 @@ const clearValues = (inputs: FormInputItem[] = inputData.value): void => {
   syncState()
 }
 
-/**
- * Batch-updates the disable state across all form items.
- */
 const disableAllInputs = (status: boolean, inputs: FormInputItem[] = inputData.value): void => {
   for (let i = 0; i < inputs.length; i++) {
     const input = inputs[i]
@@ -547,9 +556,6 @@ const disableAllInputs = (status: boolean, inputs: FormInputItem[] = inputData.v
   }
 }
 
-/**
- * Batch-updates the readonly state across all form items.
- */
 const readonlyAllInputs = (status: boolean, inputs: FormInputItem[] = inputData.value): void => {
   for (let i = 0; i < inputs.length; i++) {
     const input = inputs[i]
@@ -601,27 +607,26 @@ const onClick = (event: MouseEvent, input: FormInputItem): void => {
 // Watchers & Lifecycle Hooks
 // ==========================================
 
-// در FormBuilder.vue (Core)
 watch(
     () => props.inputs || props.value,
     (newInputs) => {
-      if (isSyncingFromInputs) return // این فلگ خیلی مهمه!
+      if (isSyncingFromInputs) return
       if (!newInputs || !Array.isArray(newInputs)) return
-
-      // اگر دیتای ورودی دقیقاً همین رفرنس فعلی هست کاری نکن
       if (newInputs === inputData.value) return
 
-      // اگر فقط مقادیر value تغییر کرده‌اند، ساختار رو از اول نساز
+      // Fast-path: Synchronize values in-place if structural schema identity is preserved
       if (inputData.value.length === newInputs.length) {
         let isStructureSame = true
         for (let i = 0; i < newInputs.length; i++) {
-          if (inputData.value[i]?.name !== newInputs[i]?.name || inputData.value[i]?.type !== newInputs[i]?.type) {
+          if (
+              inputData.value[i]?.name !== newInputs[i]?.name ||
+              inputData.value[i]?.type !== newInputs[i]?.type
+          ) {
             isStructureSame = false
             break
           }
         }
         if (isStructureSame) {
-          // ساختار یکیه، فقط مقدارها رو سینک کن بدون بازسازی کل DOM
           for (let i = 0; i < newInputs.length; i++) {
             if (inputData.value[i].value !== newInputs[i].value) {
               inputData.value[i].value = newInputs[i].value
@@ -631,7 +636,6 @@ watch(
         }
       }
 
-      // اگر ساختار واقعاً عوض شده (مثلاً فیلدی کم یا زیاد شده):
       setInputs(newInputs)
       if (props.formData && Object.keys(props.formData).length > 0) {
         applyFormDataToInputs(props.formData)
@@ -644,10 +648,27 @@ watch(
     () => props.formData,
     (newFormData) => {
       if (isSyncingFromInputs) return
-      if (!newFormData || Object.keys(newFormData).length === 0) {
-        return
-      }
+      if (!newFormData || Object.keys(newFormData).length === 0) return
       applyFormDataToInputs(newFormData)
+    },
+    { deep: true }
+)
+
+// Reactively synchronize validation engine settings
+watch(
+    [
+      () => props.locale,
+      () => props.i18n,
+      () => props.customRules,
+      () => props.messages
+    ],
+    () => {
+      validator.updateConfig({
+        locale: props.locale,
+        i18n: props.i18n,
+        customRules: props.customRules,
+        messages: props.messages
+      })
     },
     { deep: true }
 )
@@ -662,6 +683,8 @@ onBeforeUnmount(() => {
 
 defineExpose({
   focus,
+  validate,
+  resetValidation,
   flattenFormData,
   getFormData,
   setFormData,
